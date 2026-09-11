@@ -38,6 +38,8 @@ export function Settings({ cfg, reload }: { cfg: Config | null; reload: () => vo
               <p>AWS publishes certifications as Credly badges and exposes no API of its own. Set <code className="rounded bg-white/10 px-1">CREDLY_HANDLE</code> to the name in your profile URL. When you pass an exam the badge is detected automatically, along with its three-year expiry.</p>
             } />
 
+          <GmailRow cfg={cfg} reload={reload} />
+
           <Row
             name="Apple Calendar"
             status={cfg?.appleCalendar.mode === 'eventkit' ? 'ok' : cfg?.appleCalendar.mode === 'ics' ? 'partial' : 'off'}
@@ -82,6 +84,69 @@ export function Settings({ cfg, reload }: { cfg: Config | null; reload: () => vo
           scale superlinearly (100 × level<sup>1.35</sup>) so later levels take real work.
         </p>
       </Card>
+    </div>
+  )
+}
+
+function GmailRow({ cfg, reload }: { cfg: Config | null; reload: () => void }) {
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState('')
+  const [help, setHelp] = useState(false)
+  const g = cfg?.email?.gmail
+  const dot = g?.connected ? 'bg-[#34d399]' : g?.configured ? 'bg-[#fbbf24]' : 'bg-[#555577]'
+
+  const sync = async () => {
+    setBusy(true); setMsg('')
+    try {
+      const r = await fetch('/api/email/sync', { method: 'POST' })
+      const j = await r.json()
+      if (!r.ok) throw new Error(j.error)
+      setMsg(`✓ fetched ${j.fetched}, triaged ${j.classified} in ${j.batches} batch${j.batches === 1 ? '' : 'es'}`)
+      reload()
+    } catch (e: any) { setMsg(`✗ ${e.message}`) } finally { setBusy(false) }
+  }
+
+  return (
+    <div className="rounded-2xl border border-[#272740] bg-black/25 p-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dot}`} />
+        <div className="min-w-[200px] flex-1">
+          <div className="font-medium">Gmail — personal inbox</div>
+          <div className="text-xs text-[#8b8bb0]">
+            {g?.connected ? 'Connected. Headers and snippets only — bodies are never requested.'
+             : g?.configured ? 'Credentials set. Click Connect to authorize.'
+             : 'Not configured.'}
+          </div>
+          {cfg?.email?.lastSync.gmail && (
+            <div className="text-[11px] text-[#555577]">last synced {new Date(cfg.email.lastSync.gmail).toLocaleString()}</div>
+          )}
+        </div>
+        <Button size="sm" onClick={() => setHelp(!help)}>{help ? 'Hide setup' : 'Setup'}</Button>
+        {g?.configured && (
+          <Button size="sm" onClick={() => window.open('/api/email/gmail/auth', '_blank')}>
+            {g.connected ? 'Reconnect' : 'Connect'}
+          </Button>
+        )}
+        <Button size="sm" variant="primary" onClick={sync} disabled={busy || !g?.connected}>
+          {busy ? 'Syncing…' : '↻ Sync mail'}
+        </Button>
+      </div>
+
+      {help && (
+        <div className="mt-3 space-y-1.5 rounded-xl border border-[#272740] bg-black/40 p-3 text-xs text-[#8b8bb0]">
+          <p>1. Open <Link href="https://console.cloud.google.com/projectcreate">Google Cloud Console</Link> and create a project.</p>
+          <p>2. Enable the <Link href="https://console.cloud.google.com/apis/library/gmail.googleapis.com">Gmail API</Link>.</p>
+          <p>3. <strong>OAuth consent screen</strong> → External → add yourself as a test user. Then set <strong>Publishing status → In production</strong>. (Left in “Testing”, Google expires the sign-in every 7 days.) It stays unverified, which is fine for personal use — you’ll click past a warning once.</p>
+          <p>4. <strong>Credentials</strong> → Create OAuth client ID → <strong>Web application</strong>. Add this exact authorized redirect URI:</p>
+          <pre className="my-1 rounded bg-black/50 px-2 py-1.5 text-[#d8d8ff]">http://localhost:8787/api/email/gmail/callback</pre>
+          <p>5. Put the client ID and secret in <code className="rounded bg-white/10 px-1">.env</code>, hidden input:</p>
+          <pre className="my-1 rounded bg-black/50 px-2 py-1.5 text-[#d8d8ff]">npm run token GMAIL_CLIENT_ID{'\n'}npm run token GMAIL_CLIENT_SECRET</pre>
+          <p>6. Restart the server, then click <strong>Connect</strong>.</p>
+        </div>
+      )}
+      {msg && (
+        <div className={`mt-2 rounded-lg px-3 py-2 text-xs ${msg.startsWith('✓') ? 'bg-[#34d399]/12 text-[#34d399]' : 'bg-[#fb7185]/12 text-[#fb7185]'}`}>{msg}</div>
+      )}
     </div>
   )
 }

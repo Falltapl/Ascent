@@ -12,6 +12,7 @@ import { syncEventKit, checkEventKit, eventKitBuilt } from './integrations/event
 import { streamChat, providerStatus, defaultProvider, readableError, type ChatTurn, type ProviderId, type Effort } from './assistant/index.ts'
 import { classifyPending } from './email/classify.ts'
 import * as graph from './email/sources/graph.ts'
+import * as gmail from './email/sources/gmail.ts'
 
 const app = express()
 app.use(cors({ origin: 'http://localhost:5173' }))
@@ -28,7 +29,8 @@ app.get('/api/config', (_req, res) => {
     assistant: { providers: providerStatus(), active: defaultProvider() },
     email: {
       graph: { configured: graph.configured(), connected: graph.connected() },
-      lastSync: meta.get('sync:email:graph'),
+      gmail: { configured: gmail.configured(), connected: gmail.connected() },
+      lastSync: { graph: meta.get('sync:email:graph'), gmail: meta.get('sync:email:gmail') },
     },
     appleCalendar: {
       // EventKit is preferred: local, private, no published feed.
@@ -301,10 +303,51 @@ app.patch('/api/email/:id', (req, res) => {
 })
 
 app.post('/api/email/sync', wrap(async (_req, res) => {
-  if (!graph.connected()) return res.status(400).json({ error: 'Not connected to Microsoft — connect in Settings' })
-  const fetched = await graph.fetchMail()
+  // Sync whichever mailboxes are connected; one failing shouldn't block the other.
+  const sources: [string, () => Promise<{ fetched: number }>][] = []
+  if (graph.connected()) sources.push(['graph', () => graph.fetchMail()])
+  if (gmail.connected()) sources.push(['gmail', () => gmail.fetchMail()])
+  if (!sources.length) {
+    return res.status(400).json({ error: 'No mailbox connected — connect Gmail in Settings' })
+  }
+
+  let fetched = 0
+  const errors: string[] = []
+  for (const [name, run] of sources) {
+    try { fetched += (await run()).fetched } catch (e: any) { errors.push(`${name}: ${e.message}`) }
+  }
+  if (!fetched && errors.length) return res.status(502).json({ error: errors.join(' · ') })
+
   const triaged = await classifyPending()
-  res.json({ ...fetched, ...triaged })
+  res.json({ fetched, ...triaged, ...(errors.length ? { warnings: errors } : {}) })
+}))
+
+/* Gmail OAuth — loopback redirect, so nothing needs hosting. */
+app.get('/api/email/gmail/auth', (_req, res) => {
+  try { res.redirect(gmail.authUrl()) }
+  catch (e: any) { res.status(400).send(`<pre>${e.message}</pre>`) }
+})
+
+app.get('/api/email/gmail/callback', wrap(async (req, res) => {
+  const page = (title: string, body: string, ok: boolean) => `<!doctype html>
+<meta charset="utf-8"><title>${title}</title>
+<body style="font:15px/1.5 -apple-system,system-ui,sans-serif;background:#0a0a14;color:#f0f0ff;display:grid;place-content:center;height:100vh;margin:0;text-align:center">
+<div><div style="font-size:42px">${ok ? '\u2713' : '\u2715'}</div>
+<h1 style="font-size:19px;margin:.4em 0;color:${ok ? '#34d399' : '#fb7185'}">${title}</h1>
+<p style="color:#8b8bb0;max-width:34em">${body}</p></div>`
+
+  if (req.query.error) {
+    return res.status(400).send(page('Authorization declined', String(req.query.error), false))
+  }
+  const code = String(req.query.code ?? '')
+  if (!code) return res.status(400).send(page('No authorization code', 'Google did not send a code back.', false))
+
+  try {
+    await gmail.handleCallback(code)
+    res.send(page('Gmail connected', 'You can close this tab and return to Ascent, then hit Sync mail.', true))
+  } catch (e: any) {
+    res.status(400).send(page('Connection failed', e.message, false))
+  }
 }))
 
 /** Classify whatever is pending, without fetching — used for the sample data too. */

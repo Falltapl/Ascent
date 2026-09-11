@@ -57,14 +57,14 @@ export function Inbox({ cfg }: { cfg: Config | null }) {
   }
 
   const unclassified = counts['unclassified'] ?? 0
-  const connected = cfg?.email?.graph.connected
+  const connected = Boolean(cfg?.email?.gmail.connected || cfg?.email?.graph.connected)
 
   return (
     <div className="space-y-5">
       <Card className="p-5" hover={false}>
         <SectionHead
           title="Inbox triage"
-          hint={connected ? 'Microsoft 365 · classified by the assistant' : 'Not connected to your school mailbox yet'}
+          hint={connected ? `${[cfg?.email?.gmail.connected && 'Gmail', cfg?.email?.graph.connected && 'Microsoft 365'].filter(Boolean).join(' + ')} · classified by the assistant` : 'No mailbox connected yet'}
           action={
             <div className="flex gap-2">
               {unclassified > 0 && (
@@ -102,7 +102,7 @@ export function Inbox({ cfg }: { cfg: Config | null }) {
         <Card className="p-5" hover={false}>
           <Empty text={connected
             ? 'Nothing at this level. Try a lower filter, or sync again.'
-            : 'Connect your school mailbox in Settings, then sync. You can also load sample mail to see how triage works.'} />
+            : 'Connect Gmail in Settings, then sync. Sample mail is already loaded — hit Triage to see how it works.'} />
         </Card>
       ) : (
         <Card className="p-5" hover={false}>

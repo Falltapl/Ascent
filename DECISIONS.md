@@ -229,7 +229,29 @@ class cancellation is not buried under club newsletters.
 for Exchange Online; IMAP and POP still work but only over OAuth 2.0. So there is no app-password
 shortcut for a Microsoft 365 mailbox — OAuth or nothing.
 
-**Device-code flow, not a redirect.** An authorization-code flow needs a hosted redirect URI and
+**UTA blocks it.** Graph Explorer signed in fine with the UTA account and `GET /me` returned 200 —
+so the tenant does issue delegated tokens — but `GET /me/messages` returns **403**. `Mail.Read` is
+consented separately from `User.Read`, and UTA denies it to students. The Graph source below is kept
+for other tenants, or if that policy changes, but it is not the working path here.
+
+**Gmail is the live source.** OAuth 2.0 with a loopback redirect to `http://localhost:8787`, which
+this server already answers, so nothing needs hosting.
+
+*Scope choice:* `gmail.metadata` is the tighter scope and was the first choice, but it excludes the
+message snippet — and subject lines alone misclassify badly ("Re: your question" tells you nothing).
+So `gmail.readonly` is requested and every call asks for `format=metadata`. The scope permits more
+than the code uses; bodies are never requested and never stored.
+
+*The 7-day trap:* Google issues refresh tokens that expire after **7 days** while an OAuth app sits
+in "Testing" publishing status, which would mean reconnecting weekly forever. Setting the app to
+"In production" — unverified is fine for personal use — makes them permanent. The refresh handler
+detects `invalid_grant` and says exactly this rather than reporting a generic auth failure.
+
+*The gap this leaves:* professors email the `@mavs.uta.edu` address, so Gmail alone does not carry
+the messages this feature exists for. Closing it means either forwarding UTA mail into Gmail, or
+signing into Outlook desktop and reading its local database.
+
+**Device-code flow, not a redirect** (Graph, retained but blocked here). An authorization-code flow needs a hosted redirect URI and
 usually a client secret. Device code needs neither: the app prints a short code, the user enters it
 at a Microsoft URL, and the token poll completes. Right shape for a tool running on localhost. The
 one prerequisite is a free app registration with public client flows enabled and delegated
