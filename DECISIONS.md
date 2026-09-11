@@ -36,7 +36,7 @@ Scraping with a session cookie was considered and rejected: it breaks on any mar
 violates their terms. Instead the catalog fills in the name, description, and workload estimate from
 a pasted URL, and module completion is a local counter. Cheap to maintain, honest about what it is.
 
-### Apple Calendar: read-only, deliberately
+### Apple Calendar: local read, not a published feed
 
 Three routes existed. A Swift EventKit helper was compiled and run to test the most capable one:
 
@@ -48,9 +48,21 @@ That denial was **not** a user refusal — no dialog ever appeared. macOS TCC at
 an unbundled CLI binary to its parent process, which here was the host app, and that has no Calendar
 entitlement. The fix is either a signed bundle or granting the launching app Calendar access.
 
-Rather than make first-run setup depend on that, v1 reads a published `webcal://` feed: no
-permissions, no credentials, works headless. Two-way sync via CalDAV with an app-specific password is
-the documented upgrade path and needs no schema change — `cal_events` already has everything.
+The published-`webcal://` route avoids TCC entirely, but it has a cost that only becomes obvious when
+you read what "Public Calendar" actually does: it uploads the calendar to Apple's servers at a URL
+that requires no authentication. Obscure, but public. That is a poor default for someone's class and
+personal schedule.
+
+So EventKit is the primary path after all, with the permission handled rather than avoided. The
+helper (`native/calfetch.swift`, built by `npm run build:native`) prints JSON and degrades to
+`{ok:false, reason}` instead of hanging, and the server turns each reason into an instruction —
+`access_denied` becomes "grant Calendar access to the terminal you started the app from." Launched
+from a terminal, that terminal owns the prompt and the grant sticks.
+
+The ICS feed remains as a documented fallback for anyone who would rather publish than grant, and the
+UI labels it honestly as "publicly readable by anyone with the URL" rather than presenting the two as
+equivalent. Two-way sync via CalDAV with an app-specific password is still the upgrade path and needs
+no schema change — `cal_events` already has everything.
 
 ---
 

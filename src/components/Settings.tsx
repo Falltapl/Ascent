@@ -40,13 +40,22 @@ export function Settings({ cfg, reload }: { cfg: Config | null; reload: () => vo
 
           <Row
             name="Apple Calendar"
-            status={cfg?.appleCalendar.configured ? 'ok' : 'off'}
-            detail={cfg?.appleCalendar.configured ? 'Read-only calendar feed.' : 'Not connected.'}
+            status={cfg?.appleCalendar.mode === 'eventkit' ? 'ok' : cfg?.appleCalendar.mode === 'ics' ? 'partial' : 'off'}
+            detail={
+              cfg?.appleCalendar.mode === 'eventkit' ? 'Reading Calendar.app directly — nothing published, no credentials.'
+              : cfg?.appleCalendar.mode === 'ics' ? 'Published calendar feed (publicly readable by anyone with the URL).'
+              : 'Not connected.'}
             last={cfg?.lastSync.calendar}
             onSync={() => api.syncCalendar()}
             reload={reload}
             help={
-              <p>In Calendar.app, right-click a calendar → <em>Share Calendar…</em> → tick <em>Public Calendar</em>, copy the <code className="rounded bg-white/10 px-1">webcal://</code> URL into <code className="rounded bg-white/10 px-1">APPLE_CALENDAR_ICS_URL</code>. Read-only by design for v1; two-way sync would need CalDAV and an app-specific password.</p>
+              <>
+                <p><strong>Recommended — read Calendar.app locally.</strong> Nothing is uploaded and no credential is involved. Build the helper once:</p>
+                <pre className="my-1.5 rounded bg-black/50 px-2 py-1.5">npm run build:native</pre>
+                <p>Then start the app <em>from Terminal</em> with <code className="rounded bg-white/10 px-1">npm run dev</code> and hit Sync. macOS will ask Terminal for Calendar access — allow it once. If you miss the prompt, enable it under System Settings › Privacy &amp; Security › Calendars.</p>
+                <p className="mt-1.5"><strong>Alternative — published feed.</strong> Calendar.app → right-click a calendar → <em>Share Calendar…</em> → tick <em>Public Calendar</em>, and put the <code className="rounded bg-white/10 px-1">webcal://</code> URL in <code className="rounded bg-white/10 px-1">APPLE_CALENDAR_ICS_URL</code>. Easier, but it makes that calendar readable by anyone who has the URL.</p>
+                <p className="mt-1.5">Both are read-only. Writing study blocks back would need CalDAV and an app-specific password.</p>
+              </>
             } />
         </div>
       </Card>

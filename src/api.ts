@@ -35,7 +35,7 @@ export type State = {
 export type Config = {
   canvas: { mode: 'token' | 'ics' | 'off'; baseUrl: string | null }
   credly: { handle: string | null }
-  appleCalendar: { configured: boolean }
+  appleCalendar: { mode: 'eventkit' | 'ics' | 'off'; configured: boolean }
   lastSync: { canvas: string | null; credly: string | null; calendar: string | null }
 }
 

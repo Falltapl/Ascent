@@ -10,7 +10,8 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "sync": "tsx server/sync-once.ts",
-    "token": "bash scripts/set-token.sh"
+    "token": "bash scripts/set-token.sh",
+    "build:native": "swiftc -O native/calfetch.swift -o bin/calfetch"
   },
   "dependencies": {
     "cors": "^2.8.6",

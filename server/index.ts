@@ -8,6 +8,7 @@ import { syncCanvas, canvasWhoAmI, canvasMode } from './integrations/canvas.ts'
 import { syncCredly } from './integrations/credly.ts'
 import { lookupCourse } from './integrations/coursera.ts'
 import { syncAppleCalendar, syncCanvasIcs } from './integrations/ics.ts'
+import { syncEventKit, checkEventKit, eventKitBuilt } from './integrations/eventkit.ts'
 
 const app = express()
 app.use(cors({ origin: 'http://localhost:5173' }))
@@ -21,7 +22,11 @@ app.get('/api/config', (_req, res) => {
   res.json({
     canvas: { mode: canvasMode(), baseUrl: process.env.CANVAS_BASE_URL ?? null },
     credly: { handle: process.env.CREDLY_HANDLE || null },
-    appleCalendar: { configured: Boolean(process.env.APPLE_CALENDAR_ICS_URL) },
+    appleCalendar: {
+      // EventKit is preferred: local, private, no published feed.
+      mode: eventKitBuilt() ? 'eventkit' : process.env.APPLE_CALENDAR_ICS_URL ? 'ics' : 'off',
+      configured: eventKitBuilt() || Boolean(process.env.APPLE_CALENDAR_ICS_URL),
+    },
     lastSync: {
       canvas: meta.get('sync:canvas'),
       credly: meta.get('sync:credly'),
@@ -206,12 +211,21 @@ app.post('/api/sync/credly', wrap(async (req, res) => {
 }))
 
 app.post('/api/sync/calendar', wrap(async (_req, res) => {
+  // Prefer reading Calendar.app locally; fall back to a published ICS feed.
+  if (eventKitBuilt()) {
+    const out = await syncEventKit()
+    meta.set('sync:calendar', nowISO())
+    return res.json({ mode: 'eventkit', ...out })
+  }
   const url = process.env.APPLE_CALENDAR_ICS_URL
-  if (!url) return res.status(400).json({ error: 'Set APPLE_CALENDAR_ICS_URL in .env' })
+  if (!url) return res.status(400).json({ error: 'Build the native helper (npm run build:native) or set APPLE_CALENDAR_ICS_URL in .env' })
   const out = await syncAppleCalendar(url)
   meta.set('sync:calendar', nowISO())
-  res.json(out)
+  res.json({ mode: 'ics', ...out })
 }))
+
+/** Reports whether macOS has granted Calendar access, without syncing. */
+app.get('/api/calendar/check', wrap(async (_req, res) => res.json(await checkEventKit())))
 
 /* ── errors ─────────────────────────────────────────────────────────── */
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
