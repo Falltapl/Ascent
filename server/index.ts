@@ -9,7 +9,7 @@ import { syncCredly } from './integrations/credly.ts'
 import { lookupCourse } from './integrations/coursera.ts'
 import { syncAppleCalendar, syncCanvasIcs } from './integrations/ics.ts'
 import { syncEventKit, checkEventKit, eventKitBuilt } from './integrations/eventkit.ts'
-import { streamChat, claudeConfigured, CHAT_MODEL, type ChatTurn } from './integrations/claude.ts'
+import { streamChat, providerStatus, defaultProvider, readableError, type ChatTurn, type ProviderId, type Effort } from './assistant/index.ts'
 
 const app = express()
 app.use(cors({ origin: 'http://localhost:5173' }))
@@ -23,7 +23,7 @@ app.get('/api/config', (_req, res) => {
   res.json({
     canvas: { mode: canvasMode(), baseUrl: process.env.CANVAS_BASE_URL ?? null },
     credly: { handle: process.env.CREDLY_HANDLE || null },
-    assistant: { configured: claudeConfigured(), model: CHAT_MODEL },
+    assistant: { providers: providerStatus(), active: defaultProvider() },
     appleCalendar: {
       // EventKit is preferred: local, private, no published feed.
       mode: eventKitBuilt() ? 'eventkit' : process.env.APPLE_CALENDAR_ICS_URL ? 'ics' : 'off',
@@ -231,7 +231,7 @@ app.get('/api/calendar/check', wrap(async (_req, res) => res.json(await checkEve
 
 /* ── assistant ──────────────────────────────────────────────────────── */
 app.post('/api/chat', wrap(async (req, res) => {
-  const { messages, includeContext = true, effort = 'medium' } = req.body ?? {}
+  const { messages, includeContext = true, effort = 'medium', provider = null } = req.body ?? {}
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: 'messages[] is required' })
   }
@@ -249,17 +249,23 @@ app.post('/api/chat', wrap(async (req, res) => {
   const send = (type: string, value: string) => res.write(`data: ${JSON.stringify({ type, value })}\n\n`)
 
   // If the browser navigates away mid-answer, stop burning tokens.
+  //
+  // This must listen on `res`, not `req`: on a POST, `req` emits 'close' as
+  // soon as the request BODY has been consumed, which happens before streaming
+  // even begins — so `req.on('close')` marks every request as aborted and the
+  // reply comes back empty. `res` emits 'close' when the response finishes or
+  // the socket drops, and `writableEnded` separates those two cases.
   let aborted = false
-  req.on('close', () => { aborted = true })
+  res.on('close', () => { if (!res.writableEnded) aborted = true })
 
   try {
-    for await (const chunk of streamChat(history, Boolean(includeContext), effort)) {
+    for await (const chunk of streamChat(provider as ProviderId | null, history, Boolean(includeContext), effort as Effort)) {
       if (aborted) break
       send(chunk.type, chunk.value)
     }
   } catch (e: any) {
     console.error('[ascent] chat:', e.message)
-    send('error', e.message ?? 'Assistant request failed')
+    send('error', readableError(e))
   } finally {
     if (!aborted) res.end()
   }

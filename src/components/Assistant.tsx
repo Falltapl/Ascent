@@ -23,13 +23,17 @@ export function Assistant({ cfg }: { cfg: Config | null }) {
   const [busy, setBusy] = useState(false)
   const [useContext, setUseContext] = useState(true)
   const [showThinking, setShowThinking] = useState(false)
+  const [provider, setProvider] = useState<'claude' | 'gemini' | null>(null)
   const bottom = useRef<HTMLDivElement>(null)
   const abort = useRef<AbortController | null>(null)
 
   useEffect(() => { try { localStorage.setItem(STORE, JSON.stringify(turns.slice(-40))) } catch { /* quota */ } }, [turns])
   useEffect(() => { bottom.current?.scrollIntoView({ behavior: 'smooth' }) }, [turns, busy])
 
-  const ready = cfg?.assistant.configured
+  const available = (cfg?.assistant.providers ?? []).filter((p) => p.configured)
+  const active = provider ?? cfg?.assistant.active ?? null
+  const ready = available.length > 0
+  const activeModel = available.find((p) => p.id === active)?.model ?? ''
 
   async function send(text: string) {
     const q = text.trim()
@@ -47,7 +51,7 @@ export function Assistant({ cfg }: { cfg: Config | null }) {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: next, includeContext: useContext }),
+        body: JSON.stringify({ messages: next, includeContext: useContext, provider: active }),
         signal: ctrl.signal,
       })
       if (!res.ok || !res.body) throw new Error(`Request failed (${res.status})`)
@@ -101,9 +105,20 @@ export function Assistant({ cfg }: { cfg: Config | null }) {
         <div className="flex-1">
           <h2 className="font-[var(--font-display)] text-base font-bold">Ask anything</h2>
           <p className="text-xs text-[#8b8bb0]">
-            {ready ? `${cfg?.assistant.model} · general knowledge, plus your study context when relevant` : 'Not connected'}
+            {ready ? `${activeModel} · general knowledge, plus your study context when relevant` : 'Not connected'}
           </p>
         </div>
+        {available.length > 1 && (
+          <div className="flex overflow-hidden rounded-xl border border-[#272740]">
+            {available.map((p) => (
+              <button key={p.id} onClick={() => setProvider(p.id)} title={p.model}
+                className={`px-2.5 py-1 text-xs capitalize transition ${
+                  active === p.id ? 'bg-[#a855f7]/25 text-[#f0f0ff]' : 'text-[#8b8bb0] hover:bg-white/5'}`}>
+                {p.id}
+              </button>
+            ))}
+          </div>
+        )}
         <label className="flex cursor-pointer items-center gap-2 text-xs text-[#8b8bb0]">
           <input type="checkbox" checked={useContext} onChange={(e) => setUseContext(e.target.checked)} className="h-3.5 w-3.5 accent-[#a855f7]" />
           share my progress
@@ -122,10 +137,19 @@ export function Assistant({ cfg }: { cfg: Config | null }) {
         {!ready && (
           <div className="rounded-xl border border-[#fbbf24]/30 bg-[#fbbf24]/8 p-4 text-sm text-[#fbbf24]">
             <p className="font-semibold">No API key set.</p>
-            <p className="mt-1 text-[#c7c7e6]">
-              Get one at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer" className="text-[#22d3ee] underline underline-offset-2">console.anthropic.com</a>, then run:
-            </p>
-            <pre className="mt-2 rounded bg-black/50 px-3 py-2 font-[var(--font-mono)] text-xs text-[#d8d8ff]">npm run token ANTHROPIC_API_KEY</pre>
+            <p className="mt-1 text-[#c7c7e6]">Add either one — whichever you have. Both work; if you set both you can switch between them here.</p>
+            <div className="mt-2 space-y-2">
+              <div>
+                <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="text-[#22d3ee] underline underline-offset-2">aistudio.google.com/apikey</a>
+                <span className="text-xs text-[#8b8bb0]"> — Gemini, has a free tier</span>
+                <pre className="mt-1 rounded bg-black/50 px-3 py-2 font-[var(--font-mono)] text-xs text-[#d8d8ff]">npm run token GEMINI_API_KEY</pre>
+              </div>
+              <div>
+                <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer" className="text-[#22d3ee] underline underline-offset-2">console.anthropic.com</a>
+                <span className="text-xs text-[#8b8bb0]"> — Claude, pay as you go</span>
+                <pre className="mt-1 rounded bg-black/50 px-3 py-2 font-[var(--font-mono)] text-xs text-[#d8d8ff]">npm run token ANTHROPIC_API_KEY</pre>
+              </div>
+            </div>
             <p className="mt-2 text-xs text-[#8b8bb0]">Input is hidden and written straight to .env. Restart the server afterwards.</p>
           </div>
         )}
@@ -169,7 +193,7 @@ export function Assistant({ cfg }: { cfg: Config | null }) {
                   const u = JSON.parse(t.usage)
                   return (
                     <div className="mt-1.5 font-[var(--font-mono)] text-[10px] text-[#555577]">
-                      {u.in} in · {u.out} out{u.cacheRead ? ` · ${u.cacheRead} cached` : ''}
+                      {u.model} · {u.in} in · {u.out} out{u.thoughts ? ` · ${u.thoughts} thinking` : ''}{u.cacheRead ? ` · ${u.cacheRead} cached` : ''}
                     </div>
                   )
                 } catch { return null }

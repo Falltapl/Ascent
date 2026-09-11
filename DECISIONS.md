@@ -199,8 +199,24 @@ handshake.
 untrusted input like any other. Verified with an `<img onerror=...>` payload: it renders as literal
 text and does not execute.
 
-Aborting the fetch cancels the request server-side (`req.on('close')`), so navigating away
-mid-answer stops the spend.
+**Two providers, one prompt.** Claude (`claude-opus-5`) and Gemini (`gemini-3.8-flash`) sit behind a
+small registry; whichever has a key becomes active, and with both set the header offers a switch.
+The system prompt and progress snapshot live in `assistant/shared.ts` so the only difference between
+providers is transport, not behaviour. The two differ in one way that matters: Claude accepts a
+mid-conversation `{role: "system"}` message, so volatile context lands *after* the cached prefix;
+Gemini has no such role, so the snapshot is appended to the final user turn inside a
+`<current_progress>` tag, leaving `systemInstruction` byte-stable for implicit caching. Effort maps
+onto each provider's own knob — Anthropic's `output_config.effort`, Google's `thinkingLevel`.
+
+Provider errors are flattened to one sentence before reaching the UI. Google nests a JSON string
+inside a JSON error envelope; raw, an invalid key rendered as forty lines of escaped braces.
+
+**A bug worth recording.** Cancellation was first written as `req.on('close')`. On a POST, `req`
+emits `close` as soon as the request *body* has been read — which is before streaming starts — so
+every request was flagged aborted, the loop broke on the first chunk, and the response never ended:
+empty replies and a hung connection. The signal has to be `res.on('close')`, with `res.writableEnded`
+separating a finished response from a dropped socket. It only surfaced because the error path was
+timed rather than eyeballed.
 
 ---
 
