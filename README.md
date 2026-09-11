@@ -45,7 +45,16 @@ npx tsx server/seed.ts --clear    # wipe everything
 ### Canvas
 
 Open [uta.instructure.com/profile/settings](https://uta.instructure.com/profile/settings) → **Approved
-Integrations** → **+ New Access Token**, and put it in `CANVAS_TOKEN`.
+Integrations** → **+ New Access Token**. Then install it without it touching your screen, your shell
+history, or the process list:
+
+```bash
+npm run token
+```
+
+It prompts with hidden input and writes straight into `.env` (`chmod 600`, gitignored). Use
+`npm run token CREDLY_HANDLE` for any other key. A Canvas token can read your grades and submit work
+as you, so never paste one anywhere it gets recorded — rotate it in Canvas if you do.
 
 If that button isn't there, UTA blocks student tokens. Use the fallback: Canvas → **Calendar** →
 **Calendar Feed**, and put that URL in `CANVAS_ICS_URL`. Due dates still sync; grades don't. The app

@@ -9,7 +9,8 @@
     "dev:web": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "sync": "tsx server/sync-once.ts"
+    "sync": "tsx server/sync-once.ts",
+    "token": "bash scripts/set-token.sh"
   },
   "dependencies": {
     "cors": "^2.8.6",
