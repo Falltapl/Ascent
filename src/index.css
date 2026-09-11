@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+/* ──────────────────────────────────────────────────────────────────────
+   Ascent design tokens.
+   Deep indigo ground, vivid accents. Each accent is semantic and reused
+   consistently: violet = certifications, cyan = coursework, amber = streaks
+   and XP, emerald = completion, rose = overdue.
+   ────────────────────────────────────────────────────────────────────── */
+@theme {
+  --color-ground:   #0a0a14;
+  --color-surface:  #12121f;
+  --color-raised:   #1a1a2e;
+  --color-line:     #272740;
+  --color-ink:      #f0f0ff;
+  --color-muted:    #8b8bb0;
+
+  --color-violet-glow: #a855f7;
+  --color-cyan-glow:   #22d3ee;
+  --color-amber-glow:  #fbbf24;
+  --color-emerald-glow:#34d399;
+  --color-rose-glow:   #fb7185;
+
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+@layer base {
+  html { color-scheme: dark; }
+  body {
+    background:
+      radial-gradient(900px 500px at 12% -10%, #2a1a5e33, transparent 60%),
+      radial-gradient(800px 500px at 92% 0%, #0e4a6e33, transparent 55%),
+      var(--color-ground);
+    background-attachment: fixed;
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+  ::selection { background: #a855f755; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: #2b2b48; border-radius: 99px; border: 2px solid transparent; background-clip: content-box; }
+  ::-webkit-scrollbar-thumb:hover { background: #3b3b60; background-clip: content-box; }
+}
+
+@layer utilities {
+  .card {
+    background: linear-gradient(160deg, #191930cc, #12121fee);
+    border: 1px solid var(--color-line);
+    border-radius: 1.25rem;
+    backdrop-filter: blur(8px);
+  }
+  .card-hover { transition: transform .22s cubic-bezier(.2,.9,.3,1.4), border-color .22s, box-shadow .22s; }
+  .card-hover:hover { transform: translateY(-3px); border-color: #3d3d66; box-shadow: 0 14px 40px -14px #000a; }
+
+  .text-grad {
+    background: linear-gradient(100deg, var(--color-violet-glow), var(--color-cyan-glow));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+
+  /* Springy pop used whenever something is completed. */
+  @keyframes pop { 0%{transform:scale(1)} 40%{transform:scale(1.18)} 100%{transform:scale(1)} }
+  .animate-pop { animation: pop .42s cubic-bezier(.2,.9,.3,1.5); }
+
+  @keyframes rise { from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:none} }
+  .animate-rise { animation: rise .4s cubic-bezier(.2,.9,.3,1.1) backwards; }
+
+  @keyframes flicker { 0%,100%{transform:scale(1) rotate(-2deg); opacity:1} 50%{transform:scale(1.12) rotate(3deg); opacity:.88} }
+  .animate-flicker { animation: flicker 1.6s ease-in-out infinite; }
+
+  @keyframes shimmer { to { background-position: 200% 0; } }
+  .animate-shimmer {
+    background-size: 200% 100%;
+    animation: shimmer 2.4s linear infinite;
+  }
+}
