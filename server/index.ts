@@ -10,6 +10,8 @@ import { lookupCourse } from './integrations/coursera.ts'
 import { syncAppleCalendar, syncCanvasIcs } from './integrations/ics.ts'
 import { syncEventKit, checkEventKit, eventKitBuilt } from './integrations/eventkit.ts'
 import { streamChat, providerStatus, defaultProvider, readableError, type ChatTurn, type ProviderId, type Effort } from './assistant/index.ts'
+import { classifyPending } from './email/classify.ts'
+import * as graph from './email/sources/graph.ts'
 
 const app = express()
 app.use(cors({ origin: 'http://localhost:5173' }))
@@ -24,6 +26,10 @@ app.get('/api/config', (_req, res) => {
     canvas: { mode: canvasMode(), baseUrl: process.env.CANVAS_BASE_URL ?? null },
     credly: { handle: process.env.CREDLY_HANDLE || null },
     assistant: { providers: providerStatus(), active: defaultProvider() },
+    email: {
+      graph: { configured: graph.configured(), connected: graph.connected() },
+      lastSync: meta.get('sync:email:graph'),
+    },
     appleCalendar: {
       // EventKit is preferred: local, private, no published feed.
       mode: eventKitBuilt() ? 'eventkit' : process.env.APPLE_CALENDAR_ICS_URL ? 'ics' : 'off',
@@ -270,6 +276,43 @@ app.post('/api/chat', wrap(async (req, res) => {
     if (!aborted) res.end()
   }
 }))
+
+/* ── email ──────────────────────────────────────────────────────────── */
+app.get('/api/email', (req, res) => {
+  const min = String(req.query.importance ?? 'important')
+  const rank: Record<string, number> = { critical: 3, important: 2, routine: 1, noise: 0 }
+  const floor = rank[min] ?? 2
+  const rows = (db.prepare(
+    `SELECT * FROM emails WHERE dismissed=0 ORDER BY received_at DESC LIMIT 300`,
+  ).all() as any[]).filter((r) => (rank[r.importance] ?? -1) >= floor || r.importance === null)
+
+  res.json({
+    emails: rows,
+    counts: Object.fromEntries(
+      (db.prepare(`SELECT importance, COUNT(*) n FROM emails WHERE dismissed=0 GROUP BY importance`).all() as any[])
+        .map((r) => [r.importance ?? 'unclassified', r.n]),
+    ),
+  })
+})
+
+app.patch('/api/email/:id', (req, res) => {
+  db.prepare(`UPDATE emails SET dismissed=? WHERE id=?`).run(req.body?.dismissed ? 1 : 0, req.params.id)
+  res.json({ ok: true })
+})
+
+app.post('/api/email/sync', wrap(async (_req, res) => {
+  if (!graph.connected()) return res.status(400).json({ error: 'Not connected to Microsoft — connect in Settings' })
+  const fetched = await graph.fetchMail()
+  const triaged = await classifyPending()
+  res.json({ ...fetched, ...triaged })
+}))
+
+/** Classify whatever is pending, without fetching — used for the sample data too. */
+app.post('/api/email/classify', wrap(async (_req, res) => res.json(await classifyPending())))
+
+app.post('/api/email/connect/start', wrap(async (_req, res) => res.json(await graph.startDeviceLogin())))
+app.post('/api/email/connect/poll', wrap(async (_req, res) => res.json(await graph.pollDeviceLogin())))
+app.get('/api/email/whoami', wrap(async (_req, res) => res.json(await graph.whoAmI())))
 
 /* ── errors ─────────────────────────────────────────────────────────── */
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

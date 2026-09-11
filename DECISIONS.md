@@ -220,7 +220,44 @@ timed rather than eyeballed.
 
 ---
 
-## 7. Known limits
+## 7. Inbox triage
+
+An Inbox tab that pulls school mail and sorts it into critical / important / routine / noise, so a
+class cancellation is not buried under club newsletters.
+
+**Password auth to a university mailbox no longer exists.** Microsoft disabled Basic Authentication
+for Exchange Online; IMAP and POP still work but only over OAuth 2.0. So there is no app-password
+shortcut for a Microsoft 365 mailbox — OAuth or nothing.
+
+**Device-code flow, not a redirect.** An authorization-code flow needs a hosted redirect URI and
+usually a client secret. Device code needs neither: the app prints a short code, the user enters it
+at a Microsoft URL, and the token poll completes. Right shape for a tool running on localhost. The
+one prerequisite is a free app registration with public client flows enabled and delegated
+`Mail.Read`.
+
+**Local mail was evaluated first and rejected.** Reading Apple Mail's store needs Full Disk Access —
+a far broader grant than Calendar's, for one feature. Outlook desktop turned out to be installed but
+signed into nothing: its database has exactly the right shape (`Message_NormalizedSubject`,
+`Message_SenderAddressList`, `Message_Preview`) and held zero messages. If that account is ever
+signed in, it becomes a zero-auth path worth revisiting.
+
+**Classification is batched, ~25 emails per request.** Same per-email judgement as one-call-per-email
+at roughly a tenth of the cost and a fraction of the latency. Only sender, subject, and a truncated
+preview are sent — never bodies or attachments — and bodies are never stored, only Graph's own
+`bodyPreview`.
+
+Keyword rules were considered and rejected as the primary filter: a professor writing "we won't be
+meeting Thursday" never uses the word *cancelled*, and a mass department email is noise even though
+it comes from a professor. The prompt therefore asks for judgement about obligation, not keywords.
+
+**A silent-failure bug, caught in testing.** The per-batch `try/catch` exists so one malformed
+response cannot strand the rest of the queue — but it also swallowed a missing API key, so clicking
+Triage returned `classified: 0` as though it had succeeded. Now the provider is checked before the
+loop, and a run where every batch failed raises instead of reporting a no-op.
+
+---
+
+## 8. Known limits
 
 - Coursera and AWS study progress are manual. No API exists for either at the individual level.
 - Apple Calendar is read-only in v1.

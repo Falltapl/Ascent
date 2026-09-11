@@ -106,6 +106,30 @@ CREATE TABLE IF NOT EXISTS cal_events (
   location TEXT
 );
 
+-- Email headers only. Bodies are never stored; a preview is kept just long
+-- enough to classify and to render a one-line summary.
+CREATE TABLE IF NOT EXISTS emails (
+  id            TEXT PRIMARY KEY,              -- "<source>:<provider message id>"
+  source        TEXT NOT NULL,                 -- graph | gmail | outlook_local | sample
+  account       TEXT NOT NULL,                 -- school | personal
+  from_name     TEXT,
+  from_addr     TEXT,
+  subject       TEXT,
+  preview       TEXT,
+  received_at   TEXT,
+  is_read       INTEGER NOT NULL DEFAULT 0,
+  web_link      TEXT,
+  -- classifier output
+  importance    TEXT,                          -- critical | important | routine | noise
+  category      TEXT,                          -- class_change | deadline | grades | admin | career | event | other
+  reason        TEXT,
+  action_by     TEXT,                          -- date the classifier extracted, if any
+  classified_at TEXT,
+  dismissed     INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_emails_received ON emails(received_at DESC);
+CREATE INDEX IF NOT EXISTS idx_emails_importance ON emails(importance);
+
 CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT);
 `)
 

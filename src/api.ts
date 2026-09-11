@@ -40,6 +40,7 @@ export type Config = {
     active: 'claude' | 'gemini' | null
   }
   appleCalendar: { mode: 'eventkit' | 'ics' | 'off'; configured: boolean }
+  email: { graph: { configured: boolean; connected: boolean }; lastSync: string | null }
   lastSync: { canvas: string | null; credly: string | null; calendar: string | null }
 }
 

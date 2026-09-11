@@ -7,12 +7,14 @@ import { Goals } from './components/Goals'
 import { Coursework } from './components/Coursework'
 import { Settings } from './components/Settings'
 import { Assistant } from './components/Assistant'
+import { Inbox } from './components/Inbox'
 
 const TABS = [
   { id: 'dashboard', label: 'Dashboard', icon: '◈' },
   { id: 'certs', label: 'Certifications', icon: '☁' },
   { id: 'goals', label: 'Goals', icon: '◎' },
   { id: 'coursework', label: 'Coursework', icon: '✎' },
+  { id: 'inbox', label: 'Inbox', icon: '✉' },
   { id: 'ask', label: 'Ask', icon: '✦' },
   { id: 'settings', label: 'Settings', icon: '⚙' },
 ] as const
@@ -77,6 +79,7 @@ export default function App() {
         {tab === 'certs' && <Certs s={state} reload={reload} celebrate={celebrate} />}
         {tab === 'goals' && <Goals s={state} reload={reload} celebrate={celebrate} />}
         {tab === 'coursework' && <Coursework s={state} cfg={cfg} reload={reload} celebrate={celebrate} />}
+        {tab === 'inbox' && <Inbox cfg={cfg} />}
         {tab === 'ask' && <Assistant cfg={cfg} />}
         {tab === 'settings' && <Settings cfg={cfg} reload={reload} />}
       </main>
