@@ -6,12 +6,14 @@ import { Certs } from './components/Certs'
 import { Goals } from './components/Goals'
 import { Coursework } from './components/Coursework'
 import { Settings } from './components/Settings'
+import { Assistant } from './components/Assistant'
 
 const TABS = [
   { id: 'dashboard', label: 'Dashboard', icon: '◈' },
   { id: 'certs', label: 'Certifications', icon: '☁' },
   { id: 'goals', label: 'Goals', icon: '◎' },
   { id: 'coursework', label: 'Coursework', icon: '✎' },
+  { id: 'ask', label: 'Ask', icon: '✦' },
   { id: 'settings', label: 'Settings', icon: '⚙' },
 ] as const
 type Tab = (typeof TABS)[number]['id']
@@ -75,6 +77,7 @@ export default function App() {
         {tab === 'certs' && <Certs s={state} reload={reload} celebrate={celebrate} />}
         {tab === 'goals' && <Goals s={state} reload={reload} celebrate={celebrate} />}
         {tab === 'coursework' && <Coursework s={state} cfg={cfg} reload={reload} celebrate={celebrate} />}
+        {tab === 'ask' && <Assistant cfg={cfg} />}
         {tab === 'settings' && <Settings cfg={cfg} reload={reload} />}
       </main>
 

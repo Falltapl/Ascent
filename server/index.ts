@@ -9,6 +9,7 @@ import { syncCredly } from './integrations/credly.ts'
 import { lookupCourse } from './integrations/coursera.ts'
 import { syncAppleCalendar, syncCanvasIcs } from './integrations/ics.ts'
 import { syncEventKit, checkEventKit, eventKitBuilt } from './integrations/eventkit.ts'
+import { streamChat, claudeConfigured, CHAT_MODEL, type ChatTurn } from './integrations/claude.ts'
 
 const app = express()
 app.use(cors({ origin: 'http://localhost:5173' }))
@@ -22,6 +23,7 @@ app.get('/api/config', (_req, res) => {
   res.json({
     canvas: { mode: canvasMode(), baseUrl: process.env.CANVAS_BASE_URL ?? null },
     credly: { handle: process.env.CREDLY_HANDLE || null },
+    assistant: { configured: claudeConfigured(), model: CHAT_MODEL },
     appleCalendar: {
       // EventKit is preferred: local, private, no published feed.
       mode: eventKitBuilt() ? 'eventkit' : process.env.APPLE_CALENDAR_ICS_URL ? 'ics' : 'off',
@@ -226,6 +228,42 @@ app.post('/api/sync/calendar', wrap(async (_req, res) => {
 
 /** Reports whether macOS has granted Calendar access, without syncing. */
 app.get('/api/calendar/check', wrap(async (_req, res) => res.json(await checkEventKit())))
+
+/* ── assistant ──────────────────────────────────────────────────────── */
+app.post('/api/chat', wrap(async (req, res) => {
+  const { messages, includeContext = true, effort = 'medium' } = req.body ?? {}
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return res.status(400).json({ error: 'messages[] is required' })
+  }
+  // Trim to the last 20 turns; the whole history is resent every request.
+  const history: ChatTurn[] = messages.slice(-20).map((m: any) => ({
+    role: m.role === 'assistant' ? 'assistant' : 'user',
+    content: String(m.content ?? ''),
+  }))
+
+  res.setHeader('Content-Type', 'text/event-stream')
+  res.setHeader('Cache-Control', 'no-cache, no-transform')
+  res.setHeader('Connection', 'keep-alive')
+  res.flushHeaders?.()
+
+  const send = (type: string, value: string) => res.write(`data: ${JSON.stringify({ type, value })}\n\n`)
+
+  // If the browser navigates away mid-answer, stop burning tokens.
+  let aborted = false
+  req.on('close', () => { aborted = true })
+
+  try {
+    for await (const chunk of streamChat(history, Boolean(includeContext), effort)) {
+      if (aborted) break
+      send(chunk.type, chunk.value)
+    }
+  } catch (e: any) {
+    console.error('[ascent] chat:', e.message)
+    send('error', e.message ?? 'Assistant request failed')
+  } finally {
+    if (!aborted) res.end()
+  }
+}))
 
 /* ── errors ─────────────────────────────────────────────────────────── */
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

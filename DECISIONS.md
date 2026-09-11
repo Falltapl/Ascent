@@ -170,7 +170,41 @@ The failure mode of a gamified tracker is that clicking becomes worth more than 
 
 ---
 
-## 6. Known limits
+## 6. The built-in assistant
+
+An "Ask" tab backed by the Claude API (`claude-opus-5`), for general knowledge questions without
+leaving the app.
+
+**Streaming, because it's a chat UI.** A non-streaming call would sit silent for the whole
+generation. Reasoning is requested with `display: "summarized"` — the API default is `"omitted"`,
+which returns empty thinking blocks and makes the UI look frozen before the first token.
+
+**Effort is `medium`, not the default `high`.** Effort trades thoroughness for tokens and latency.
+Coding and long-horizon agentic work repay the top of the range; chat generally does not. It's a
+parameter on the request, so any route that needs more can ask for it.
+
+**The system prompt is frozen and cached; progress is not part of it.** Prompt caching is a prefix
+match — one byte of drift anywhere in the prefix invalidates everything after it. Injecting live
+assignment and readiness numbers into the system prompt would bust the cache on literally every
+turn. Instead the stable instructions carry `cache_control` and the volatile snapshot is appended as
+a mid-conversation `{role: "system"}` message, which sits after the cached prefix and carries
+operator authority rather than arriving as user text. `cache_read_input_tokens` is surfaced under
+each reply so the cache can be seen working.
+
+**Context sharing is a visible toggle**, defaulting on but switchable per conversation — the
+assistant shouldn't silently ship coursework and goals to an API for a question about the TCP
+handshake.
+
+**Markdown is rendered to React elements, never `dangerouslySetInnerHTML`.** Model output is
+untrusted input like any other. Verified with an `<img onerror=...>` payload: it renders as literal
+text and does not execute.
+
+Aborting the fetch cancels the request server-side (`req.on('close')`), so navigating away
+mid-answer stops the spend.
+
+---
+
+## 7. Known limits
 
 - Coursera and AWS study progress are manual. No API exists for either at the individual level.
 - Apple Calendar is read-only in v1.
