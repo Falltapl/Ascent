@@ -15,7 +15,7 @@ export type Cert = {
 export type Assignment = {
   id: string; source: string; course_name: string | null; title: string
   due_at: string | null; points: number | null; html_url: string | null
-  submitted: number; graded_score: number | null; done_manual: number
+  submitted: number; graded_score: number | null; done_manual: number; state: string | null
 }
 export type Course = {
   id: string; provider: string; slug: string; name: string; url: string

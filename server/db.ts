@@ -109,6 +109,12 @@ CREATE TABLE IF NOT EXISTS cal_events (
 CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT);
 `)
 
+// Additive migrations. Guarded so startup is idempotent on an existing db.
+for (const [table, col, decl] of [['assignments', 'state', 'TEXT']] as const) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]
+  if (!cols.some((c) => c.name === col)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${decl}`)
+}
+
 export const meta = {
   get(k: string): string | null {
     const r = db.prepare('SELECT v FROM meta WHERE k=?').get(k) as { v: string } | undefined

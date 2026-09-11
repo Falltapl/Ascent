@@ -65,10 +65,18 @@ export function Coursework({ s, cfg, reload, celebrate }: {
                         </button>
                         <div className="min-w-0 flex-1">
                           <div className={`truncate text-sm font-medium ${isDone ? 'text-[#8b8bb0] line-through' : ''}`}>{a.title}</div>
-                          <div className="flex gap-2 text-xs text-[#8b8bb0]">
+                          <div className="flex flex-wrap gap-2 text-xs text-[#8b8bb0]">
                             {a.points != null && <span>{a.points} pts</span>}
-                            {a.graded_score != null && <span className="text-[#34d399]">scored {a.graded_score}</span>}
-                            {a.submitted === 1 && <span className="text-[#34d399]">submitted</span>}
+                            {a.graded_score != null && (
+                              <span className="text-[#34d399]">
+                                scored {a.graded_score}{a.points ? `/${a.points}` : ''}
+                              </span>
+                            )}
+                            {a.state && a.state !== 'unsubmitted' && (
+                              <span className={a.state === 'pending_review' ? 'text-[#fbbf24]' : 'text-[#34d399]'}>
+                                {a.state.replace('_', ' ')}
+                              </span>
+                            )}
                           </div>
                         </div>
                         {!isDone && (

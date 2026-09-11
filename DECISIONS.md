@@ -76,6 +76,32 @@ expose FERPA-protected data. If that button is missing from Canvas settings, `CA
 the per-user calendar feed instead — every due date, no token, read-only. The app detects which mode
 it is in and says so in the UI rather than silently degrading.
 
+### What the real sync exposed
+
+Connecting the live token surfaced two things no amount of reading docs would have:
+
+**Canvas keeps every past enrollment "active".** An unfiltered `enrollment_state=active`
+query returned 17 courses and 320 assignments — years of finished semesters, plus
+non-academic org shells (advising, compliance, career services) sitting in a dateless
+"Default Term". 213 of those read as *open*, which would have rendered the dashboard
+useless. Filtering to courses whose term is currently running cuts it to 5 courses and
+51 assignments, and drops sync time from 19s to under 4s.
+
+**`submitted_at` is the wrong completion signal.** Work handed in on paper or graded
+manually carries a score and a `graded_at` but no submission timestamp:
+
+```
+Pop Quiz 1 - On Paper   submitted_at: null   score: 2   workflow_state: graded
+```
+
+Keying off `submitted_at` marked already-graded work as overdue. Canvas's own
+`workflow_state` is authoritative — only `unsubmitted` means open. Fixing this took
+overdue from 3 to 1, and the survivor is genuinely unsubmitted.
+
+Course names also arrive as `2268-INSY-4321-001-MOBILE APP DEVELOPMENT`, so they're
+parsed into `INSY 4321 · Mobile App Development`, with a small abbreviation list so
+"STATS FOR BA" doesn't title-case into the nonsense "Stats For Ba".
+
 ---
 
 ## 3. Progress bars that mean something
