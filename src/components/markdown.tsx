@@ -20,12 +20,12 @@ function inline(text: string, keyBase: string): ReactNode[] {
     const tok = m[0]
     const k = `${keyBase}-${i++}`
     if (tok.startsWith('`')) {
-      out.push(<code key={k} className="rounded bg-white/10 px-1 py-0.5 font-[var(--font-mono)] text-[0.9em]">{tok.slice(1, -1)}</code>)
+      out.push(<code key={k} className="rounded bg-[var(--ink)]/10 px-1 py-0.5 font-[var(--font-mono)] text-[0.9em]">{tok.slice(1, -1)}</code>)
     } else if (tok.startsWith('**')) {
-      out.push(<strong key={k} className="font-semibold text-[#f0f0ff]">{tok.slice(2, -2)}</strong>)
+      out.push(<strong key={k} className="font-semibold text-[var(--ink)]">{tok.slice(2, -2)}</strong>)
     } else if (tok.startsWith('[')) {
       const label = tok.slice(1, tok.indexOf(']'))
-      out.push(<a key={k} href={m[5]} target="_blank" rel="noreferrer" className="text-[#22d3ee] underline underline-offset-2">{label}</a>)
+      out.push(<a key={k} href={m[5]} target="_blank" rel="noreferrer" className="text-[var(--accent-2)] underline underline-offset-2">{label}</a>)
     } else {
       out.push(<em key={k}>{tok.slice(1, -1)}</em>)
     }
@@ -52,9 +52,9 @@ export function Markdown({ text }: { text: string }) {
       while (i < lines.length && !lines[i].trimStart().startsWith('```')) body.push(lines[i++])
       i++ // closing fence (may be absent while still streaming)
       blocks.push(
-        <div key={key++} className="my-2 overflow-hidden rounded-xl border border-[#272740]">
-          {lang && <div className="border-b border-[#272740] bg-black/40 px-3 py-1 font-[var(--font-mono)] text-[10px] uppercase tracking-wider text-[#8b8bb0]">{lang}</div>}
-          <pre className="overflow-x-auto bg-black/50 p-3"><code className="font-[var(--font-mono)] text-[12.5px] leading-relaxed text-[#d8d8ff]">{body.join('\n')}</code></pre>
+        <div key={key++} className="my-2 overflow-hidden rounded-xl border border-[var(--line)]">
+          {lang && <div className="border-b border-[var(--line)] bg-[var(--ground)]/55 px-3 py-1 font-[var(--font-mono)] text-[10px] uppercase tracking-wider text-[var(--muted)]">{lang}</div>}
+          <pre className="overflow-x-auto bg-[var(--ground)]/70 p-3"><code className="font-[var(--font-mono)] text-[12.5px] leading-relaxed text-[var(--ink-3)]">{body.join('\n')}</code></pre>
         </div>,
       )
       continue
@@ -63,7 +63,7 @@ export function Markdown({ text }: { text: string }) {
     // Heading
     const h = line.match(/^(#{1,4})\s+(.*)$/)
     if (h) {
-      blocks.push(<div key={key++} className="mt-3 mb-1 font-[var(--font-display)] font-bold text-[#f0f0ff]">{inline(h[2], `h${key}`)}</div>)
+      blocks.push(<div key={key++} className="mt-3 mb-1 font-[var(--font-display)] font-bold text-[var(--ink)]">{inline(h[2], `h${key}`)}</div>)
       i++
       continue
     }
@@ -78,7 +78,7 @@ export function Markdown({ text }: { text: string }) {
       }
       const L = ordered ? 'ol' : 'ul'
       blocks.push(
-        <L key={key++} className={`my-1.5 space-y-1 pl-5 ${ordered ? 'list-decimal' : 'list-disc'} marker:text-[#8b8bb0]`}>
+        <L key={key++} className={`my-1.5 space-y-1 pl-5 ${ordered ? 'list-decimal' : 'list-disc'} marker:text-[var(--muted)]`}>
           {items.map((it, n) => <li key={n}>{inline(it, `li${key}-${n}`)}</li>)}
         </L>,
       )
@@ -98,5 +98,5 @@ export function Markdown({ text }: { text: string }) {
     blocks.push(<p key={key++} className="my-1.5 leading-relaxed">{inline(para.join(' '), `p${key}`)}</p>)
   }
 
-  return <div className="text-[14px] text-[#c7c7e6]">{blocks}</div>
+  return <div className="text-[14px] text-[var(--ink-2)]">{blocks}</div>
 }

@@ -85,16 +85,16 @@ export function Inbox({ cfg }: { cfg: Config | null }) {
             return (
               <button key={l.id} onClick={() => setFloor(l.id)} title={l.blurb}
                 className={`rounded-xl border px-3 py-1.5 text-xs transition ${
-                  active ? 'border-[#a855f7] bg-[#a855f7]/15 text-[#f0f0ff]' : 'border-[#272740] text-[#8b8bb0] hover:border-[#3d3d66]'}`}>
+                  active ? 'border-[var(--accent)] bg-[var(--accent)]/15 text-[var(--ink)]' : 'border-[var(--line)] text-[var(--muted)] hover:border-[var(--line-2)]'}`}>
                 <span style={{ color: ACCENT[l.accent].ring }}>●</span> {l.label}
-                <span className="ml-1.5 text-[#8b8bb0]">{n}</span>
+                <span className="ml-1.5 text-[var(--muted)]">{n}</span>
               </button>
             )
           })}
         </div>
 
         {msg && (
-          <div className={`mt-3 rounded-lg px-3 py-2 text-xs ${msg.startsWith('✓') ? 'bg-[#34d399]/12 text-[#34d399]' : 'bg-[#fb7185]/12 text-[#fb7185]'}`}>{msg}</div>
+          <div className={`mt-3 rounded-lg px-3 py-2 text-xs ${msg.startsWith('✓') ? 'bg-[var(--ok)]/12 text-[var(--ok)]' : 'bg-[var(--bad)]/12 text-[var(--bad)]'}`}>{msg}</div>
         )}
       </Card>
 
@@ -109,17 +109,17 @@ export function Inbox({ cfg }: { cfg: Config | null }) {
           <ul className="space-y-2">
             {mail.map((m, i) => {
               const lvl = LEVELS.find((l) => l.id === m.importance)
-              const ring = lvl ? ACCENT[lvl.accent].ring : '#555577'
+              const ring = lvl ? ACCENT[lvl.accent].ring : 'var(--faint)'
               return (
-                <li key={m.id} className="animate-rise rounded-xl border border-[#272740] bg-black/25 p-3"
+                <li key={m.id} className="animate-rise rounded-xl border border-[var(--line)] bg-[var(--ground)]/45 p-3"
                     style={{ animationDelay: `${i * 30}ms`, borderLeft: `3px solid ${ring}` }}>
                   <div className="flex flex-wrap items-baseline gap-2">
                     <span className="font-medium">{m.from_name || m.from_addr}</span>
-                    <span className="text-[11px] text-[#555577]">{m.from_addr}</span>
-                    <span className="ml-auto shrink-0 text-[11px] text-[#8b8bb0]">{ago(m.received_at)}</span>
+                    <span className="text-[11px] text-[var(--faint)]">{m.from_addr}</span>
+                    <span className="ml-auto shrink-0 text-[11px] text-[var(--muted)]">{ago(m.received_at)}</span>
                   </div>
-                  <div className={`mt-0.5 text-sm ${m.is_read ? 'text-[#c7c7e6]' : 'font-semibold'}`}>{m.subject}</div>
-                  <div className="mt-1 line-clamp-2 text-xs text-[#8b8bb0]">{m.preview}</div>
+                  <div className={`mt-0.5 text-sm ${m.is_read ? 'text-[var(--ink-2)]' : 'font-semibold'}`}>{m.subject}</div>
+                  <div className="mt-1 line-clamp-2 text-xs text-[var(--muted)]">{m.preview}</div>
 
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
                     {m.importance && (
@@ -127,12 +127,12 @@ export function Inbox({ cfg }: { cfg: Config | null }) {
                         {lvl?.label}
                       </span>
                     )}
-                    {m.category && <span className="rounded-md bg-white/5 px-1.5 py-0.5 text-[#8b8bb0]">{CATEGORY_LABEL[m.category] ?? m.category}</span>}
-                    {m.reason && <span className="italic text-[#8b8bb0]">{m.reason}</span>}
-                    {m.action_by && <span className="rounded-md bg-[#fbbf24]/15 px-1.5 py-0.5 text-[#fbbf24]">by {m.action_by}</span>}
+                    {m.category && <span className="rounded-md bg-[var(--ink)]/5 px-1.5 py-0.5 text-[var(--muted)]">{CATEGORY_LABEL[m.category] ?? m.category}</span>}
+                    {m.reason && <span className="italic text-[var(--muted)]">{m.reason}</span>}
+                    {m.action_by && <span className="rounded-md bg-[var(--warn)]/15 px-1.5 py-0.5 text-[var(--warn)]">by {m.action_by}</span>}
                     <span className="ml-auto flex gap-2">
-                      {m.web_link && <a href={m.web_link} target="_blank" rel="noreferrer" className="text-[#22d3ee] hover:underline">open ↗</a>}
-                      <button className="text-[#555577] hover:text-[#fb7185]"
+                      {m.web_link && <a href={m.web_link} target="_blank" rel="noreferrer" className="text-[var(--accent-2)] hover:underline">open ↗</a>}
+                      <button className="text-[var(--faint)] hover:text-[var(--bad)]"
                         onClick={async () => { await fetch(`/api/email/${encodeURIComponent(m.id)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dismissed: true }) }); load() }}>
                         dismiss
                       </button>

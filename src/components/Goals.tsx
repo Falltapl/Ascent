@@ -48,10 +48,10 @@ export function Goals({ s, reload, celebrate }: { s: State; reload: () => void; 
           <SectionHead title="Completed" hint={`${done.length} goals · ${done.length * 200} XP earned`} />
           <ul className="space-y-2">
             {done.map((g) => (
-              <li key={g.id} className="flex items-center gap-3 rounded-xl border border-[#34d399]/20 bg-[#34d399]/5 px-4 py-2.5">
-                <span className="text-[#34d399]">✓</span>
-                <span className="flex-1 truncate text-sm text-[#8b8bb0] line-through">{g.title}</span>
-                <span className="text-xs text-[#8b8bb0]">
+              <li key={g.id} className="flex items-center gap-3 rounded-xl border border-[var(--ok)]/20 bg-[var(--ok)]/5 px-4 py-2.5">
+                <span className="text-[var(--ok)]">✓</span>
+                <span className="flex-1 truncate text-sm text-[var(--muted)] line-through">{g.title}</span>
+                <span className="text-xs text-[var(--muted)]">
                   {g.completed_at && new Date(g.completed_at).toLocaleDateString()}
                 </span>
                 <Button size="sm" onClick={async () => { await api.updateGoal(g.id, { status: 'active' }); reload() }}>Reopen</Button>
@@ -85,20 +85,20 @@ function GoalCard({ g, i, reload, celebrate }: { g: Goal; i: number; reload: () 
         <div className="min-w-0">
           <div className="mb-1 flex items-center gap-2">
             <span>{cat.emoji}</span>
-            <span className="text-[10px] uppercase tracking-wider text-[#8b8bb0]">{cat.label}</span>
+            <span className="text-[10px] uppercase tracking-wider text-[var(--muted)]">{cat.label}</span>
           </div>
           <h3 className="font-[var(--font-display)] font-bold leading-snug">{g.title}</h3>
-          {g.detail && <p className="mt-1 text-sm text-[#8b8bb0]">{g.detail}</p>}
+          {g.detail && <p className="mt-1 text-sm text-[var(--muted)]">{g.detail}</p>}
         </div>
         <button onClick={async () => { await api.deleteGoal(g.id); reload() }}
-                className="shrink-0 rounded-lg px-2 py-1 text-[#555577] transition hover:bg-[#fb7185]/15 hover:text-[#fb7185]">×</button>
+                className="shrink-0 rounded-lg px-2 py-1 text-[var(--faint)] transition hover:bg-[var(--bad)]/15 hover:text-[var(--bad)]">×</button>
       </div>
 
       {g.target_date && (
         <div className={`mb-3 inline-block rounded-lg px-2 py-1 text-[11px] ${
-          due.tone === 'rose' ? 'bg-[#fb7185]/15 text-[#fb7185]'
-          : due.tone === 'amber' ? 'bg-[#fbbf24]/15 text-[#fbbf24]'
-          : 'bg-white/5 text-[#8b8bb0]'}`}>
+          due.tone === 'rose' ? 'bg-[var(--bad)]/15 text-[var(--bad)]'
+          : due.tone === 'amber' ? 'bg-[var(--warn)]/15 text-[var(--warn)]'
+          : 'bg-[var(--ink)]/5 text-[var(--muted)]'}`}>
           🗓 {due.text}
         </div>
       )}
@@ -106,21 +106,21 @@ function GoalCard({ g, i, reload, celebrate }: { g: Goal; i: number; reload: () 
       {g.steps.length > 0 && (
         <>
           <div className="mb-1.5 flex items-baseline justify-between text-xs">
-            <span className="text-[#8b8bb0]">{doneSteps}/{g.steps.length} steps</span>
-            <span className="font-[var(--font-mono)] font-bold" style={{ color: cat.accent === 'violet' ? '#a855f7' : undefined }}>{pct}%</span>
+            <span className="text-[var(--muted)]">{doneSteps}/{g.steps.length} steps</span>
+            <span className="font-[var(--font-mono)] font-bold" style={{ color: cat.accent === 'violet' ? 'var(--accent)' : undefined }}>{pct}%</span>
           </div>
           <Bar value={pct} accent={cat.accent} />
           <ul className="mt-3 space-y-0.5">
             {g.steps.map((st) => (
               <li key={st.id} className="group flex items-center gap-2">
-                <label className="flex flex-1 cursor-pointer items-center gap-2 rounded-lg px-1.5 py-1 text-sm hover:bg-white/5">
+                <label className="flex flex-1 cursor-pointer items-center gap-2 rounded-lg px-1.5 py-1 text-sm hover:bg-[var(--ink)]/5">
                   <input type="checkbox" checked={!!st.done}
                     onChange={async (e) => { await api.toggleStep(st.id, e.target.checked); if (e.target.checked) celebrate(); reload() }}
-                    className="h-4 w-4 accent-[#34d399]" />
-                  <span className={st.done ? 'text-[#8b8bb0] line-through' : ''}>{st.label}</span>
+                    className="h-4 w-4 accent-[var(--ok)]" />
+                  <span className={st.done ? 'text-[var(--muted)] line-through' : ''}>{st.label}</span>
                 </label>
                 <button onClick={async () => { await api.deleteStep(st.id); reload() }}
-                        className="px-1 text-[#555577] opacity-0 transition group-hover:opacity-100 hover:text-[#fb7185]">×</button>
+                        className="px-1 text-[var(--faint)] opacity-0 transition group-hover:opacity-100 hover:text-[var(--bad)]">×</button>
               </li>
             ))}
           </ul>
@@ -144,7 +144,7 @@ function Chip({ children, active, onClick }: { children: React.ReactNode; active
   return (
     <button onClick={onClick}
       className={`rounded-xl border px-3 py-1.5 text-xs transition ${
-        active ? 'border-[#a855f7] bg-[#a855f7]/15 text-[#f0f0ff]' : 'border-[#272740] text-[#8b8bb0] hover:border-[#3d3d66]'}`}>
+        active ? 'border-[var(--accent)] bg-[var(--accent)]/15 text-[var(--ink)]' : 'border-[var(--line)] text-[var(--muted)] hover:border-[var(--line-2)]'}`}>
       {children}
     </button>
   )
@@ -178,7 +178,7 @@ function NewGoal({ open, onClose, onSaved }: { open: boolean; onClose: () => voi
             {CATEGORIES.map((c) => (
               <button key={c.id} onClick={() => setCategory(c.id)}
                 className={`rounded-xl border px-3 py-1.5 text-xs transition ${
-                  category === c.id ? 'border-[#a855f7] bg-[#a855f7]/15' : 'border-[#272740] text-[#8b8bb0] hover:border-[#3d3d66]'}`}>
+                  category === c.id ? 'border-[var(--accent)] bg-[var(--accent)]/15' : 'border-[var(--line)] text-[var(--muted)] hover:border-[var(--line-2)]'}`}>
                 {c.emoji} {c.label}
               </button>
             ))}

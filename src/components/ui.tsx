@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 export const ACCENT = {
-  violet: { text: 'text-[#a855f7]', ring: '#a855f7', bg: 'bg-[#a855f7]', soft: 'bg-[#a855f7]/12', border: 'border-[#a855f7]/35' },
-  cyan:   { text: 'text-[#22d3ee]', ring: '#22d3ee', bg: 'bg-[#22d3ee]', soft: 'bg-[#22d3ee]/12', border: 'border-[#22d3ee]/35' },
-  amber:  { text: 'text-[#fbbf24]', ring: '#fbbf24', bg: 'bg-[#fbbf24]', soft: 'bg-[#fbbf24]/12', border: 'border-[#fbbf24]/35' },
-  emerald:{ text: 'text-[#34d399]', ring: '#34d399', bg: 'bg-[#34d399]', soft: 'bg-[#34d399]/12', border: 'border-[#34d399]/35' },
-  rose:   { text: 'text-[#fb7185]', ring: '#fb7185', bg: 'bg-[#fb7185]', soft: 'bg-[#fb7185]/12', border: 'border-[#fb7185]/35' },
+  violet: { text: 'text-[var(--accent)]', ring: 'var(--accent)', bg: 'bg-[var(--accent)]', soft: 'bg-[var(--accent)]/12', border: 'border-[var(--accent)]/35' },
+  cyan:   { text: 'text-[var(--accent-2)]', ring: 'var(--accent-2)', bg: 'bg-[var(--accent-2)]', soft: 'bg-[var(--accent-2)]/12', border: 'border-[var(--accent-2)]/35' },
+  amber:  { text: 'text-[var(--warn)]', ring: 'var(--warn)', bg: 'bg-[var(--warn)]', soft: 'bg-[var(--warn)]/12', border: 'border-[var(--warn)]/35' },
+  emerald:{ text: 'text-[var(--ok)]', ring: 'var(--ok)', bg: 'bg-[var(--ok)]', soft: 'bg-[var(--ok)]/12', border: 'border-[var(--ok)]/35' },
+  rose:   { text: 'text-[var(--bad)]', ring: 'var(--bad)', bg: 'bg-[var(--bad)]', soft: 'bg-[var(--bad)]/12', border: 'border-[var(--bad)]/35' },
 } as const
 export type Accent = keyof typeof ACCENT
 
@@ -24,9 +24,9 @@ export function Button({
   const base = 'inline-flex items-center justify-center gap-1.5 rounded-xl font-medium transition-all active:scale-[.96] disabled:opacity-40 disabled:pointer-events-none'
   const sizes = { sm: 'px-2.5 py-1.5 text-xs', md: 'px-4 py-2 text-sm' }
   const variants = {
-    primary: 'bg-gradient-to-r from-[#a855f7] to-[#22d3ee] text-[#0a0a14] font-semibold hover:brightness-110 shadow-lg shadow-[#a855f7]/20',
-    ghost: 'bg-white/5 border border-[#272740] text-[#f0f0ff] hover:bg-white/10 hover:border-[#3d3d66]',
-    danger: 'bg-[#fb7185]/10 border border-[#fb7185]/30 text-[#fb7185] hover:bg-[#fb7185]/20',
+    primary: 'bg-gradient-to-r from-[var(--accent)] to-[var(--accent-2)] text-[var(--ground)] font-semibold hover:brightness-110 shadow-lg shadow-[var(--accent)]/20',
+    ghost: 'bg-[var(--ink)]/5 border border-[var(--line)] text-[var(--ink)] hover:bg-[var(--ink)]/10 hover:border-[var(--line-2)]',
+    danger: 'bg-[var(--bad)]/10 border border-[var(--bad)]/30 text-[var(--bad)] hover:bg-[var(--bad)]/20',
   }
   return (
     <button type={type} onClick={onClick} disabled={disabled} className={`${base} ${sizes[size]} ${variants[variant]} ${className}`}>
@@ -50,7 +50,7 @@ export function Ring({ value, size = 112, stroke = 9, accent = 'violet', label, 
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#272740" strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--line)" strokeWidth={stroke} />
         <circle
           cx={size / 2} cy={size / 2} r={r} fill="none"
           stroke={ACCENT[accent].ring} strokeWidth={stroke} strokeLinecap="round"
@@ -60,7 +60,7 @@ export function Ring({ value, size = 112, stroke = 9, accent = 'violet', label, 
       </svg>
       <div className="absolute inset-0 grid place-content-center text-center leading-none">
         <div className="font-[var(--font-mono)] text-2xl font-bold tabular-nums">{label ?? `${value}%`}</div>
-        {sub && <div className="mt-1 text-[10px] uppercase tracking-wider text-[#8b8bb0]">{sub}</div>}
+        {sub && <div className="mt-1 text-[10px] uppercase tracking-wider text-[var(--muted)]">{sub}</div>}
       </div>
     </div>
   )
@@ -70,13 +70,13 @@ export function Bar({ value, accent = 'violet', height = 8, striped = false }: {
   value: number; accent?: Accent; height?: number; striped?: boolean
 }) {
   return (
-    <div className="w-full overflow-hidden rounded-full bg-[#272740]" style={{ height }}>
+    <div className="w-full overflow-hidden rounded-full bg-[var(--line)]" style={{ height }}>
       <div
         className={`h-full rounded-full ${striped ? 'animate-shimmer' : ''}`}
         style={{
           width: `${Math.min(100, Math.max(0, value))}%`,
           background: striped
-            ? `linear-gradient(100deg, ${ACCENT[accent].ring}, #ffffff55, ${ACCENT[accent].ring})`
+            ? `linear-gradient(100deg, ${ACCENT[accent].ring}, color-mix(in oklab, var(--ink) 40%, transparent), ${ACCENT[accent].ring})`
             : ACCENT[accent].ring,
           transition: 'width .7s cubic-bezier(.2,.9,.3,1)',
           boxShadow: `0 0 10px ${ACCENT[accent].ring}55`,
@@ -100,7 +100,7 @@ export function Modal({ open, onClose, title, children }: {
       <div className="card w-full max-w-lg animate-rise p-6" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
           <h3 className="font-[var(--font-display)] text-lg font-bold">{title}</h3>
-          <button onClick={onClose} className="rounded-lg px-2 text-xl text-[#8b8bb0] hover:bg-white/5 hover:text-white">×</button>
+          <button onClick={onClose} className="rounded-lg px-2 text-xl text-[var(--muted)] hover:bg-[var(--ink)]/5 hover:text-white">×</button>
         </div>
         {children}
       </div>
@@ -111,14 +111,14 @@ export function Modal({ open, onClose, title, children }: {
 export function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-[#8b8bb0]">{label}</span>
+      <span className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-[var(--muted)]">{label}</span>
       {children}
     </label>
   )
 }
 
 export const inputCls =
-  'w-full rounded-xl border border-[#272740] bg-[#0a0a14]/70 px-3 py-2 text-sm text-[#f0f0ff] outline-none transition placeholder:text-[#555577] focus:border-[#a855f7] focus:ring-2 focus:ring-[#a855f7]/25'
+  'w-full rounded-xl border border-[var(--line)] bg-[var(--ground)]/70 px-3 py-2 text-sm text-[var(--ink)] outline-none transition placeholder:text-[var(--faint)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/25'
 
 /** Celebration burst. Fires on goal completion and cert milestones. */
 export function Confetti({ fire }: { fire: number }) {
@@ -129,7 +129,7 @@ export function Confetti({ fire }: { fire: number }) {
     const ctx = cv.getContext('2d')!
     cv.width = window.innerWidth
     cv.height = window.innerHeight
-    const colors = ['#a855f7', '#22d3ee', '#fbbf24', '#34d399', '#fb7185']
+    const colors = ['var(--accent)', 'var(--accent-2)', 'var(--warn)', 'var(--ok)', 'var(--bad)']
     const bits = Array.from({ length: 140 }, () => ({
       x: cv.width / 2 + (Math.random() - 0.5) * 260,
       y: cv.height * 0.36,

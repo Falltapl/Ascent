@@ -26,11 +26,11 @@ export function Heatmap({ data }: { data: Record<string, number> }) {
   // Fixed thresholds rather than relative-to-max: a quiet month shouldn't
   // make 15 minutes look like a heavy day.
   const shade = (m: number) =>
-    m === 0 ? '#1a1a2e'
-    : m < 30 ? '#4c1d95'
-    : m < 60 ? '#7e22ce'
-    : m < 120 ? '#a855f7'
-    : '#d8b4fe'
+    m === 0 ? 'var(--raised)'
+    : m < 30 ? 'color-mix(in oklab, var(--accent) 32%, var(--ground))'
+    : m < 60 ? 'color-mix(in oklab, var(--accent) 58%, var(--ground))'
+    : m < 120 ? 'var(--accent)'
+    : 'color-mix(in oklab, var(--accent) 62%, white)'
 
   let lastMonth = -1
   return (
@@ -42,7 +42,7 @@ export function Heatmap({ data }: { data: Record<string, number> }) {
           if (showLabel) lastMonth = m
           return (
             <div key={i} className="flex flex-col gap-[3px]">
-              <div className="h-3 text-[9px] leading-3 text-[#8b8bb0]">
+              <div className="h-3 text-[9px] leading-3 text-[var(--muted)]">
                 {showLabel ? w[0].date.toLocaleDateString(undefined, { month: 'short' }) : ''}
               </div>
               {w.map((d) => (
@@ -50,14 +50,14 @@ export function Heatmap({ data }: { data: Record<string, number> }) {
                   key={d.key}
                   title={`${d.key} — ${d.mins} min`}
                   className="h-[11px] w-[11px] rounded-[3px] transition-transform hover:scale-150 hover:ring-1 hover:ring-white/50"
-                  style={{ background: shade(d.mins), boxShadow: d.mins >= 120 ? '0 0 6px #a855f788' : undefined }}
+                  style={{ background: shade(d.mins), boxShadow: d.mins >= 120 ? '0 0 6px color-mix(in oklab, var(--accent) 55%, transparent)' : undefined }}
                 />
               ))}
             </div>
           )
         })}
       </div>
-      <div className="mt-3 flex items-center gap-1.5 text-[10px] text-[#8b8bb0]">
+      <div className="mt-3 flex items-center gap-1.5 text-[10px] text-[var(--muted)]">
         <span>Less</span>
         {[0, 20, 45, 90, 150].map((m) => (
           <div key={m} className="h-[11px] w-[11px] rounded-[3px]" style={{ background: shade(m) }} />

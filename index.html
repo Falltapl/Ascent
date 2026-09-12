@@ -8,6 +8,22 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>▲</text></svg>" />
+  <script>
+      /* Applies the saved theme before first paint. Without this the app
+         renders dark for a frame and then snaps to light. */
+      (function () {
+        try {
+          var d = { theme: 'dark', accent: 'violet', motion: 'on' };
+          var raw = localStorage.getItem('ascent.theme.v1');
+          var s = raw ? Object.assign(d, JSON.parse(raw)) : d;
+          if (!raw && window.matchMedia('(prefers-color-scheme: light)').matches) s.theme = 'light';
+          var r = document.documentElement;
+          r.dataset.theme = s.theme; r.dataset.accent = s.accent; r.dataset.motion = s.motion;
+        } catch (e) {
+          document.documentElement.dataset.theme = 'dark';
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

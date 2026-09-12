@@ -101,30 +101,30 @@ export function Assistant({ cfg }: { cfg: Config | null }) {
   return (
     <Card className="flex h-[calc(100vh-230px)] min-h-[460px] flex-col overflow-hidden" hover={false}>
       {/* header */}
-      <div className="flex flex-wrap items-center gap-3 border-b border-[#272740] px-5 py-3">
+      <div className="flex flex-wrap items-center gap-3 border-b border-[var(--line)] px-5 py-3">
         <div className="flex-1">
           <h2 className="font-[var(--font-display)] text-base font-bold">Ask anything</h2>
-          <p className="text-xs text-[#8b8bb0]">
+          <p className="text-xs text-[var(--muted)]">
             {ready ? `${activeModel} · general knowledge, plus your study context when relevant` : 'Not connected'}
           </p>
         </div>
         {available.length > 1 && (
-          <div className="flex overflow-hidden rounded-xl border border-[#272740]">
+          <div className="flex overflow-hidden rounded-xl border border-[var(--line)]">
             {available.map((p) => (
               <button key={p.id} onClick={() => setProvider(p.id)} title={p.model}
                 className={`px-2.5 py-1 text-xs capitalize transition ${
-                  active === p.id ? 'bg-[#a855f7]/25 text-[#f0f0ff]' : 'text-[#8b8bb0] hover:bg-white/5'}`}>
+                  active === p.id ? 'bg-[var(--accent)]/25 text-[var(--ink)]' : 'text-[var(--muted)] hover:bg-[var(--ink)]/5'}`}>
                 {p.id}
               </button>
             ))}
           </div>
         )}
-        <label className="flex cursor-pointer items-center gap-2 text-xs text-[#8b8bb0]">
-          <input type="checkbox" checked={useContext} onChange={(e) => setUseContext(e.target.checked)} className="h-3.5 w-3.5 accent-[#a855f7]" />
+        <label className="flex cursor-pointer items-center gap-2 text-xs text-[var(--muted)]">
+          <input type="checkbox" checked={useContext} onChange={(e) => setUseContext(e.target.checked)} className="h-3.5 w-3.5 accent-[var(--accent)]" />
           share my progress
         </label>
-        <label className="flex cursor-pointer items-center gap-2 text-xs text-[#8b8bb0]">
-          <input type="checkbox" checked={showThinking} onChange={(e) => setShowThinking(e.target.checked)} className="h-3.5 w-3.5 accent-[#a855f7]" />
+        <label className="flex cursor-pointer items-center gap-2 text-xs text-[var(--muted)]">
+          <input type="checkbox" checked={showThinking} onChange={(e) => setShowThinking(e.target.checked)} className="h-3.5 w-3.5 accent-[var(--accent)]" />
           show reasoning
         </label>
         {turns.length > 0 && (
@@ -135,22 +135,22 @@ export function Assistant({ cfg }: { cfg: Config | null }) {
       {/* transcript */}
       <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
         {!ready && (
-          <div className="rounded-xl border border-[#fbbf24]/30 bg-[#fbbf24]/8 p-4 text-sm text-[#fbbf24]">
+          <div className="rounded-xl border border-[var(--warn)]/30 bg-[var(--warn)]/8 p-4 text-sm text-[var(--warn)]">
             <p className="font-semibold">No API key set.</p>
-            <p className="mt-1 text-[#c7c7e6]">Add either one — whichever you have. Both work; if you set both you can switch between them here.</p>
+            <p className="mt-1 text-[var(--ink-2)]">Add either one — whichever you have. Both work; if you set both you can switch between them here.</p>
             <div className="mt-2 space-y-2">
               <div>
-                <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="text-[#22d3ee] underline underline-offset-2">aistudio.google.com/apikey</a>
-                <span className="text-xs text-[#8b8bb0]"> — Gemini, has a free tier</span>
-                <pre className="mt-1 rounded bg-black/50 px-3 py-2 font-[var(--font-mono)] text-xs text-[#d8d8ff]">npm run token GEMINI_API_KEY</pre>
+                <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="text-[var(--accent-2)] underline underline-offset-2">aistudio.google.com/apikey</a>
+                <span className="text-xs text-[var(--muted)]"> — Gemini, has a free tier</span>
+                <pre className="mt-1 rounded bg-[var(--ground)]/70 px-3 py-2 font-[var(--font-mono)] text-xs text-[var(--ink-3)]">npm run token GEMINI_API_KEY</pre>
               </div>
               <div>
-                <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer" className="text-[#22d3ee] underline underline-offset-2">console.anthropic.com</a>
-                <span className="text-xs text-[#8b8bb0]"> — Claude, pay as you go</span>
-                <pre className="mt-1 rounded bg-black/50 px-3 py-2 font-[var(--font-mono)] text-xs text-[#d8d8ff]">npm run token ANTHROPIC_API_KEY</pre>
+                <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer" className="text-[var(--accent-2)] underline underline-offset-2">console.anthropic.com</a>
+                <span className="text-xs text-[var(--muted)]"> — Claude, pay as you go</span>
+                <pre className="mt-1 rounded bg-[var(--ground)]/70 px-3 py-2 font-[var(--font-mono)] text-xs text-[var(--ink-3)]">npm run token ANTHROPIC_API_KEY</pre>
               </div>
             </div>
-            <p className="mt-2 text-xs text-[#8b8bb0]">Input is hidden and written straight to .env. Restart the server afterwards.</p>
+            <p className="mt-2 text-xs text-[var(--muted)]">Input is hidden and written straight to .env. Restart the server afterwards.</p>
           </div>
         )}
 
@@ -158,7 +158,7 @@ export function Assistant({ cfg }: { cfg: Config | null }) {
           <div className="grid gap-2 sm:grid-cols-2">
             {STARTERS.map((s) => (
               <button key={s} onClick={() => send(s)}
-                className="rounded-xl border border-[#272740] bg-black/25 p-3 text-left text-sm text-[#8b8bb0] transition hover:border-[#a855f7]/50 hover:text-[#f0f0ff]">
+                className="rounded-xl border border-[var(--line)] bg-[var(--ground)]/45 p-3 text-left text-sm text-[var(--muted)] transition hover:border-[var(--accent)]/50 hover:text-[var(--ink)]">
                 {s}
               </button>
             ))}
@@ -168,22 +168,22 @@ export function Assistant({ cfg }: { cfg: Config | null }) {
         {turns.map((t, i) =>
           t.role === 'user' ? (
             <div key={i} className="flex justify-end">
-              <div className="max-w-[85%] rounded-2xl rounded-br-md bg-gradient-to-br from-[#a855f7] to-[#8b5cf6] px-4 py-2.5 text-sm text-[#0a0a14]">
+              <div className="max-w-[85%] rounded-2xl rounded-br-md bg-gradient-to-br from-[var(--accent)] to-[var(--accent-deep)] px-4 py-2.5 text-sm text-[var(--ground)]">
                 {t.content}
               </div>
             </div>
           ) : (
             <div key={i} className="animate-rise">
               {showThinking && t.thinking && (
-                <details className="mb-2 rounded-xl border border-[#272740] bg-black/30 px-3 py-2" open>
-                  <summary className="cursor-pointer text-xs text-[#8b8bb0]">reasoning</summary>
-                  <div className="mt-1.5 whitespace-pre-wrap text-xs text-[#8b8bb0]">{t.thinking}</div>
+                <details className="mb-2 rounded-xl border border-[var(--line)] bg-[var(--ground)]/40 px-3 py-2" open>
+                  <summary className="cursor-pointer text-xs text-[var(--muted)]">reasoning</summary>
+                  <div className="mt-1.5 whitespace-pre-wrap text-xs text-[var(--muted)]">{t.thinking}</div>
                 </details>
               )}
               {t.content ? <Markdown text={t.content} /> : (
                 busy && i === turns.length - 1 && (
-                  <div className="flex items-center gap-2 text-sm text-[#8b8bb0]">
-                    <span className="h-3 w-3 animate-spin rounded-full border-2 border-[#272740] border-t-[#a855f7]" />
+                  <div className="flex items-center gap-2 text-sm text-[var(--muted)]">
+                    <span className="h-3 w-3 animate-spin rounded-full border-2 border-[var(--line)] border-t-[var(--accent)]" />
                     thinking…
                   </div>
                 )
@@ -192,7 +192,7 @@ export function Assistant({ cfg }: { cfg: Config | null }) {
                 try {
                   const u = JSON.parse(t.usage)
                   return (
-                    <div className="mt-1.5 font-[var(--font-mono)] text-[10px] text-[#555577]">
+                    <div className="mt-1.5 font-[var(--font-mono)] text-[10px] text-[var(--faint)]">
                       {u.model} · {u.in} in · {u.out} out{u.thoughts ? ` · ${u.thoughts} thinking` : ''}{u.cacheRead ? ` · ${u.cacheRead} cached` : ''}
                     </div>
                   )
@@ -206,7 +206,7 @@ export function Assistant({ cfg }: { cfg: Config | null }) {
 
       {/* composer */}
       <form
-        className="flex gap-2 border-t border-[#272740] px-5 py-3"
+        className="flex gap-2 border-t border-[var(--line)] px-5 py-3"
         onSubmit={(e) => { e.preventDefault(); send(input) }}>
         <textarea
           className={`${inputCls} max-h-32 min-h-[42px] flex-1 resize-none py-2.5`}

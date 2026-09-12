@@ -47,33 +47,33 @@ export function Coursework({ s, cfg, reload, celebrate }: {
             {Object.entries(byCourse).map(([course, items]) => (
               <div key={course}>
                 <div className="mb-2 flex items-center gap-2">
-                  <h3 className="text-sm font-semibold text-[#22d3ee]">{course}</h3>
-                  <span className="rounded-md bg-white/5 px-1.5 py-0.5 text-[10px] text-[#8b8bb0]">{items.length}</span>
+                  <h3 className="text-sm font-semibold text-[var(--accent-2)]">{course}</h3>
+                  <span className="rounded-md bg-[var(--ink)]/5 px-1.5 py-0.5 text-[10px] text-[var(--muted)]">{items.length}</span>
                 </div>
                 <ul className="space-y-2">
                   {items.map((a, i) => {
                     const d = dueMeta(a.due_at)
                     const isDone = Boolean(a.submitted || a.done_manual)
                     return (
-                      <li key={a.id} className="animate-rise flex items-center gap-3 rounded-xl border border-[#272740] bg-black/25 p-3"
+                      <li key={a.id} className="animate-rise flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--ground)]/45 p-3"
                           style={{ animationDelay: `${i * 35}ms` }}>
                         <button
                           onClick={async () => { await api.toggleAssignment(a.id, !isDone); if (!isDone) celebrate(); reload() }}
                           className={`grid h-5 w-5 shrink-0 place-content-center rounded-md border-2 transition ${
-                            isDone ? 'border-[#34d399] bg-[#34d399] text-[#0a0a14]' : 'border-[#3d3d66] hover:border-[#34d399] hover:bg-[#34d399]/20'}`}>
+                            isDone ? 'border-[var(--ok)] bg-[var(--ok)] text-[var(--ground)]' : 'border-[var(--line-2)] hover:border-[var(--ok)] hover:bg-[var(--ok)]/20'}`}>
                           {isDone && <span className="text-xs font-bold">✓</span>}
                         </button>
                         <div className="min-w-0 flex-1">
-                          <div className={`truncate text-sm font-medium ${isDone ? 'text-[#8b8bb0] line-through' : ''}`}>{a.title}</div>
-                          <div className="flex flex-wrap gap-2 text-xs text-[#8b8bb0]">
+                          <div className={`truncate text-sm font-medium ${isDone ? 'text-[var(--muted)] line-through' : ''}`}>{a.title}</div>
+                          <div className="flex flex-wrap gap-2 text-xs text-[var(--muted)]">
                             {a.points != null && <span>{a.points} pts</span>}
                             {a.graded_score != null && (
-                              <span className="text-[#34d399]">
+                              <span className="text-[var(--ok)]">
                                 scored {a.graded_score}{a.points ? `/${a.points}` : ''}
                               </span>
                             )}
                             {a.state && a.state !== 'unsubmitted' && (
-                              <span className={a.state === 'pending_review' ? 'text-[#fbbf24]' : 'text-[#34d399]'}>
+                              <span className={a.state === 'pending_review' ? 'text-[var(--warn)]' : 'text-[var(--ok)]'}>
                                 {a.state.replace('_', ' ')}
                               </span>
                             )}
@@ -81,13 +81,13 @@ export function Coursework({ s, cfg, reload, celebrate }: {
                         </div>
                         {!isDone && (
                           <span className={`shrink-0 rounded-lg px-2 py-1 text-[11px] font-medium ${
-                            d.tone === 'rose' ? 'bg-[#fb7185]/15 text-[#fb7185]'
-                            : d.tone === 'amber' ? 'bg-[#fbbf24]/15 text-[#fbbf24]'
-                            : 'bg-white/5 text-[#8b8bb0]'}`}>{d.text}</span>
+                            d.tone === 'rose' ? 'bg-[var(--bad)]/15 text-[var(--bad)]'
+                            : d.tone === 'amber' ? 'bg-[var(--warn)]/15 text-[var(--warn)]'
+                            : 'bg-[var(--ink)]/5 text-[var(--muted)]'}`}>{d.text}</span>
                         )}
                         {a.html_url && (
                           <a href={a.html_url} target="_blank" rel="noreferrer"
-                             className="shrink-0 text-xs text-[#22d3ee] hover:underline">open ↗</a>
+                             className="shrink-0 text-xs text-[var(--accent-2)] hover:underline">open ↗</a>
                         )}
                       </li>
                     )
@@ -111,16 +111,16 @@ export function Coursework({ s, cfg, reload, celebrate }: {
             {s.courses.map((c) => {
               const pct = c.total_modules ? Math.round((c.done_modules / c.total_modules) * 100) : 0
               return (
-                <div key={c.id} className="rounded-2xl border border-[#272740] bg-black/25 p-4">
+                <div key={c.id} className="rounded-2xl border border-[var(--line)] bg-[var(--ground)]/45 p-4">
                   <div className="mb-2 flex items-start justify-between gap-2">
-                    <a href={c.url} target="_blank" rel="noreferrer" className="font-semibold leading-snug hover:text-[#22d3ee]">{c.name}</a>
+                    <a href={c.url} target="_blank" rel="noreferrer" className="font-semibold leading-snug hover:text-[var(--accent-2)]">{c.name}</a>
                     <button onClick={async () => { await api.deleteCourse(c.id); reload() }}
-                            className="shrink-0 px-1 text-[#555577] hover:text-[#fb7185]">×</button>
+                            className="shrink-0 px-1 text-[var(--faint)] hover:text-[var(--bad)]">×</button>
                   </div>
-                  {c.workload && <div className="mb-2 text-[11px] text-[#8b8bb0]">⏱ {c.workload}</div>}
+                  {c.workload && <div className="mb-2 text-[11px] text-[var(--muted)]">⏱ {c.workload}</div>}
                   <div className="mb-1.5 flex items-baseline justify-between text-xs">
-                    <span className="text-[#8b8bb0]">{c.done_modules}/{c.total_modules} modules</span>
-                    <span className="font-[var(--font-mono)] font-bold text-[#22d3ee]">{pct}%</span>
+                    <span className="text-[var(--muted)]">{c.done_modules}/{c.total_modules} modules</span>
+                    <span className="font-[var(--font-mono)] font-bold text-[var(--accent-2)]">{pct}%</span>
                   </div>
                   <Bar value={pct} accent="cyan" />
                   <div className="mt-3 flex items-center gap-2">
@@ -175,12 +175,12 @@ function AddCourse({ open, onClose, onSaved }: { open: boolean; onClose: () => v
         <Field label="Number of modules">
           <input type="number" min={1} className={inputCls} value={modules} onChange={(e) => setModules(+e.target.value)} />
         </Field>
-        <p className="text-xs text-[#8b8bb0]">
+        <p className="text-xs text-[var(--muted)]">
           Name, description, and estimated workload are pulled from Coursera's public catalog.
           Coursera does not expose per-learner progress to individual accounts, so module
           completion is tracked here.
         </p>
-        {err && <p className="rounded-lg bg-[#fb7185]/15 px-3 py-2 text-xs text-[#fb7185]">{err}</p>}
+        {err && <p className="rounded-lg bg-[var(--bad)]/15 px-3 py-2 text-xs text-[var(--bad)]">{err}</p>}
         <Button variant="primary" onClick={save} disabled={busy || !input.trim()} className="w-full">
           {busy ? 'Looking up…' : 'Add course'}
         </Button>

@@ -21,7 +21,7 @@ export function Dashboard({ s, cfg, reload, celebrate }: {
     <div className="space-y-5">
       {/* Hero: level, XP, streak */}
       <Card className="relative overflow-hidden p-6" hover={false}>
-        <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-[#a855f7]/20 blur-3xl" />
+        <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-[var(--accent)]/20 blur-3xl" />
         <div className="relative flex flex-wrap items-center gap-6">
           <div className="relative">
             <Ring value={s.stats.pct} size={120} accent="violet" label={`${s.stats.level}`} sub="Level" />
@@ -32,7 +32,7 @@ export function Dashboard({ s, cfg, reload, celebrate }: {
               <span className="font-[var(--font-display)] text-2xl font-bold text-grad">
                 {s.stats.xp.toLocaleString()} XP
               </span>
-              <span className="text-xs text-[#8b8bb0]">
+              <span className="text-xs text-[var(--muted)]">
                 {s.stats.needed - s.stats.intoLevel} to level {s.stats.level + 1}
               </span>
             </div>
@@ -44,14 +44,14 @@ export function Dashboard({ s, cfg, reload, celebrate }: {
             </div>
           </div>
 
-          <div className="flex items-center gap-4 rounded-2xl border border-[#fbbf24]/25 bg-[#fbbf24]/8 px-5 py-4">
+          <div className="flex items-center gap-4 rounded-2xl border border-[var(--warn)]/25 bg-[var(--warn)]/8 px-5 py-4">
             <span className={`text-4xl ${s.stats.streak.current > 0 ? 'animate-flicker' : 'opacity-35 grayscale'}`}>🔥</span>
             <div>
-              <div className="font-[var(--font-mono)] text-3xl font-bold leading-none text-[#fbbf24]">
+              <div className="font-[var(--font-mono)] text-3xl font-bold leading-none text-[var(--warn)]">
                 {s.stats.streak.current}
               </div>
-              <div className="text-[10px] uppercase tracking-wider text-[#8b8bb0]">day streak</div>
-              <div className="mt-0.5 text-[10px] text-[#8b8bb0]">best {s.stats.streak.best}</div>
+              <div className="text-[10px] uppercase tracking-wider text-[var(--muted)]">day streak</div>
+              <div className="mt-0.5 text-[10px] text-[var(--muted)]">best {s.stats.streak.best}</div>
             </div>
           </div>
 
@@ -59,7 +59,7 @@ export function Dashboard({ s, cfg, reload, celebrate }: {
         </div>
 
         {!s.stats.streak.loggedToday && (
-          <div className="relative mt-4 rounded-xl border border-[#fbbf24]/25 bg-[#fbbf24]/8 px-4 py-2.5 text-sm text-[#fbbf24]">
+          <div className="relative mt-4 rounded-xl border border-[var(--warn)]/25 bg-[var(--warn)]/8 px-4 py-2.5 text-sm text-[var(--warn)]">
             Nothing logged today{s.stats.streak.current > 0 ? ` — your ${s.stats.streak.current}-day streak is still alive until midnight.` : '. Log a session to start a streak.'}
           </div>
         )}
@@ -74,7 +74,7 @@ export function Dashboard({ s, cfg, reload, celebrate }: {
               {s.certs.map((c) => {
                 const passed = Boolean(c.exam?.passed_at)
                 return (
-                  <div key={c.code} className="flex items-center gap-4 rounded-2xl border border-[#272740] bg-black/25 p-4">
+                  <div key={c.code} className="flex items-center gap-4 rounded-2xl border border-[var(--line)] bg-[var(--ground)]/45 p-4">
                     <Ring
                       value={passed ? 100 : c.readiness}
                       size={86} stroke={8}
@@ -83,15 +83,15 @@ export function Dashboard({ s, cfg, reload, celebrate }: {
                     />
                     <div className="min-w-0">
                       <div className="truncate font-semibold">{c.short}</div>
-                      <div className="font-[var(--font-mono)] text-[11px] text-[#8b8bb0]">{c.code}</div>
+                      <div className="font-[var(--font-mono)] text-[11px] text-[var(--muted)]">{c.code}</div>
                       {passed ? (
-                        <div className="mt-1.5 text-xs text-[#34d399]">
+                        <div className="mt-1.5 text-xs text-[var(--ok)]">
                           Passed {new Date(c.exam!.passed_at!).toLocaleDateString()}
                         </div>
                       ) : (
-                        <div className="mt-1.5 text-xs text-[#8b8bb0]">
+                        <div className="mt-1.5 text-xs text-[var(--muted)]">
                           ~{c.predictedScore} / {c.scaledRange[1]}
-                          <span className={c.predictedScore >= c.passingScore ? 'ml-1.5 text-[#34d399]' : 'ml-1.5 text-[#fb7185]'}>
+                          <span className={c.predictedScore >= c.passingScore ? 'ml-1.5 text-[var(--ok)]' : 'ml-1.5 text-[var(--bad)]'}>
                             (pass {c.passingScore})
                           </span>
                         </div>
@@ -114,20 +114,20 @@ export function Dashboard({ s, cfg, reload, celebrate }: {
                 {upcoming.map((a, i) => {
                   const d = dueMeta(a.due_at)
                   return (
-                    <li key={a.id} className="animate-rise flex items-center gap-3 rounded-xl border border-[#272740] bg-black/25 p-3" style={{ animationDelay: `${i * 45}ms` }}>
+                    <li key={a.id} className="animate-rise flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--ground)]/45 p-3" style={{ animationDelay: `${i * 45}ms` }}>
                       <button
                         onClick={async () => { await api.toggleAssignment(a.id, true); celebrate(); reload() }}
-                        className="h-5 w-5 shrink-0 rounded-md border-2 border-[#3d3d66] transition hover:border-[#34d399] hover:bg-[#34d399]/20"
+                        className="h-5 w-5 shrink-0 rounded-md border-2 border-[var(--line-2)] transition hover:border-[var(--ok)] hover:bg-[var(--ok)]/20"
                         title="Mark done"
                       />
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-sm font-medium">{a.title}</div>
-                        <div className="truncate text-xs text-[#8b8bb0]">{a.course_name ?? 'Course'}</div>
+                        <div className="truncate text-xs text-[var(--muted)]">{a.course_name ?? 'Course'}</div>
                       </div>
                       <span className={`shrink-0 rounded-lg px-2 py-1 text-[11px] font-medium ${
-                        d.tone === 'rose' ? 'bg-[#fb7185]/15 text-[#fb7185]'
-                        : d.tone === 'amber' ? 'bg-[#fbbf24]/15 text-[#fbbf24]'
-                        : 'bg-white/5 text-[#8b8bb0]'}`}>
+                        d.tone === 'rose' ? 'bg-[var(--bad)]/15 text-[var(--bad)]'
+                        : d.tone === 'amber' ? 'bg-[var(--warn)]/15 text-[var(--warn)]'
+                        : 'bg-[var(--ink)]/5 text-[var(--muted)]'}`}>
                         {d.text}
                       </span>
                     </li>
@@ -154,14 +154,14 @@ export function Dashboard({ s, cfg, reload, celebrate }: {
                 {s.events.slice(0, 6).map((e) => (
                   <li key={e.id} className="flex items-center gap-3 text-sm">
                     <div className="w-12 shrink-0 text-center">
-                      <div className="text-[10px] uppercase text-[#8b8bb0]">
+                      <div className="text-[10px] uppercase text-[var(--muted)]">
                         {new Date(e.start_at).toLocaleDateString(undefined, { weekday: 'short' })}
                       </div>
                       <div className="font-[var(--font-mono)] text-sm font-bold">{new Date(e.start_at).getDate()}</div>
                     </div>
                     <div className="min-w-0">
                       <div className="truncate">{e.title}</div>
-                      <div className="text-xs text-[#8b8bb0]">
+                      <div className="text-xs text-[var(--muted)]">
                         {e.all_day ? 'All day' : new Date(e.start_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
                       </div>
                     </div>
@@ -177,10 +177,10 @@ export function Dashboard({ s, cfg, reload, celebrate }: {
               <ul className="space-y-1.5 text-sm">
                 {s.sessions.slice(0, 7).map((x) => (
                   <li key={x.id} className="flex items-center justify-between gap-2">
-                    <span className="truncate text-[#c7c7e6]">
+                    <span className="truncate text-[var(--ink-2)]">
                       {x.kind === 'practice_exam' ? '📝 ' : '📖 '}{x.subject}
                     </span>
-                    <span className="shrink-0 font-[var(--font-mono)] text-xs text-[#8b8bb0]">{x.minutes}m</span>
+                    <span className="shrink-0 font-[var(--font-mono)] text-xs text-[var(--muted)]">{x.minutes}m</span>
                   </li>
                 ))}
               </ul>
@@ -197,7 +197,7 @@ export function Dashboard({ s, cfg, reload, celebrate }: {
 function Pill({ icon, label, tone = 'muted' }: { icon: string; label: string; tone?: 'muted' | 'rose' }) {
   return (
     <span className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 ${
-      tone === 'rose' ? 'bg-[#fb7185]/15 text-[#fb7185]' : 'bg-white/5 text-[#8b8bb0]'}`}>
+      tone === 'rose' ? 'bg-[var(--bad)]/15 text-[var(--bad)]' : 'bg-[var(--ink)]/5 text-[var(--muted)]'}`}>
       <span>{icon}</span>{label}
     </span>
   )
@@ -208,7 +208,7 @@ export function SectionHead({ title, hint, action }: { title: string; hint?: str
     <div className="mb-4 flex items-end justify-between gap-3">
       <div>
         <h2 className="font-[var(--font-display)] text-base font-bold">{title}</h2>
-        {hint && <p className="mt-0.5 text-xs text-[#8b8bb0]">{hint}</p>}
+        {hint && <p className="mt-0.5 text-xs text-[var(--muted)]">{hint}</p>}
       </div>
       {action}
     </div>
@@ -216,7 +216,7 @@ export function SectionHead({ title, hint, action }: { title: string; hint?: str
 }
 
 export function Empty({ text }: { text: string }) {
-  return <p className="rounded-xl border border-dashed border-[#272740] px-4 py-6 text-center text-sm text-[#8b8bb0]">{text}</p>
+  return <p className="rounded-xl border border-dashed border-[var(--line)] px-4 py-6 text-center text-sm text-[var(--muted)]">{text}</p>
 }
 
 function LogModal({ open, onClose, s, onSaved }: { open: boolean; onClose: () => void; s: State; onSaved: () => void }) {
@@ -242,10 +242,10 @@ function LogModal({ open, onClose, s, onSaved }: { open: boolean; onClose: () =>
           <div className="flex items-center gap-2">
             <input type="range" min={5} max={240} step={5} value={minutes}
               onChange={(e) => setMinutes(+e.target.value)}
-              className="flex-1 accent-[#a855f7]" />
-            <span className="w-16 text-right font-[var(--font-mono)] text-lg font-bold text-[#a855f7]">{minutes}m</span>
+              className="flex-1 accent-[var(--accent)]" />
+            <span className="w-16 text-right font-[var(--font-mono)] text-lg font-bold text-[var(--accent)]">{minutes}m</span>
           </div>
-          <div className="mt-1.5 text-[11px] text-[#8b8bb0]">
+          <div className="mt-1.5 text-[11px] text-[var(--muted)]">
             +{Math.min(minutes, 180)} XP{minutes > 180 && ' (daily cap is 180)'}
           </div>
         </Field>
@@ -264,7 +264,7 @@ function LogModal({ open, onClose, s, onSaved }: { open: boolean; onClose: () =>
             {[['study', '📖 Study'], ['practice_exam', '📝 Practice exam'], ['assignment', '✍️ Assignment']].map(([v, l]) => (
               <button key={v} onClick={() => setKind(v)}
                 className={`flex-1 rounded-xl border px-3 py-2 text-xs transition ${
-                  kind === v ? 'border-[#a855f7] bg-[#a855f7]/15 text-[#f0f0ff]' : 'border-[#272740] text-[#8b8bb0] hover:border-[#3d3d66]'}`}>
+                  kind === v ? 'border-[var(--accent)] bg-[var(--accent)]/15 text-[var(--ink)]' : 'border-[var(--line)] text-[var(--muted)] hover:border-[var(--line-2)]'}`}>
                 {l}
               </button>
             ))}
