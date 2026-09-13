@@ -1,6 +1,8 @@
 import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
 import { db, nowISO, uid, meta } from './db.ts'
 import { CERTS, readiness, predictedScore } from './certs.ts'
 import { computeXp, computeStreak, levelFor, heatmap } from './gamify.ts'
@@ -15,7 +17,11 @@ import * as graph from './email/sources/graph.ts'
 import * as gmail from './email/sources/gmail.ts'
 
 const app = express()
-app.use(cors({ origin: 'http://localhost:5173' }))
+// In dev the UI is served by Vite on another port, so it needs CORS. In
+// production the same process serves both, so there is no cross origin at all.
+const DIST = join(process.cwd(), 'dist')
+const SERVE_UI = existsSync(join(DIST, 'index.html')) && process.env.ASCENT_DEV !== '1'
+if (!SERVE_UI) app.use(cors({ origin: 'http://localhost:5173' }))
 app.use(express.json())
 
 const wrap = (fn: express.RequestHandler): express.RequestHandler =>
@@ -363,5 +369,27 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
   res.status(500).json({ error: err.message })
 })
 
+/* ── static UI (production) ─────────────────────────────────────────── */
+if (SERVE_UI) {
+  // Hashed asset filenames can be cached hard; index.html must never be,
+  // or a rebuilt app keeps serving the old bundle from disk cache.
+  app.use('/assets', express.static(join(DIST, 'assets'), { immutable: true, maxAge: '1y' }))
+  app.use(express.static(DIST, { index: false, maxAge: '1h' }))
+
+  // SPA fallback — anything that isn't /api and isn't a real file gets the
+  // shell. Registered as middleware because Express 5 dropped bare '*' routes.
+  app.use((req, res, next) => {
+    if (req.method !== 'GET' || req.path.startsWith('/api/')) return next()
+    // The shell must never be cached: it names the hashed bundles, so a stale
+    // copy pins the app to a previous build even after a rebuild.
+    res.setHeader('Cache-Control', 'no-store, must-revalidate')
+    res.sendFile(join(DIST, 'index.html'))
+  })
+}
+
 const port = Number(process.env.PORT || 8787)
-app.listen(port, () => console.log(`ascent api  →  http://localhost:${port}`))
+// Bind to loopback only. This holds Canvas tokens and mail; it has no business
+// being reachable from the network.
+app.listen(port, '127.0.0.1', () => {
+  console.log(`ascent ${SERVE_UI ? 'app' : 'api'}  →  http://localhost:${port}`)
+})

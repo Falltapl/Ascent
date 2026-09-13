@@ -8,3 +8,7 @@ data/
 .DS_Store
 *.log
 bin/
+
+# generated app icons
+public/icon-*.png
+public/apple-touch-icon.png

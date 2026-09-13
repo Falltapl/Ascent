@@ -22,13 +22,30 @@ integrations that actually exist, and honest local tracking for the ones that do
 
 React 19 · Vite 8 · TypeScript · Tailwind 4 · Express 5 · SQLite (`node:sqlite`, zero native deps)
 
-## Run it
+## Install it as a Mac app
 
 ```bash
 npm install
-cp .env.example .env   # fill in what you have; every integration is optional
-npm run dev            # API on :8787, UI on :5173
+npm run install:app
 ```
+
+That builds `~/Applications/Ascent.app`. Open it from Spotlight (Cmd+Space → "Ascent")
+or drag it to the Dock. It starts the local server on demand, waits for it, and opens the UI in its
+own window — no tabs, no address bar. Launching it again reuses the running server rather than
+starting a second one.
+
+Not Electron on purpose: the app is already a local web server, so bundling a Chromium runtime would
+add ~150 MB to provide a window the browser already has.
+
+## Run it in development
+
+```bash
+cp .env.example .env   # fill in what you have; every integration is optional
+npm run dev            # API on :8787, UI on :5173 with hot reload
+```
+
+`npm start` runs the production build instead — one process serving both the API and the UI on
+:8787, bound to loopback only.
 
 Open http://localhost:5173. It runs with nothing configured — the Settings tab walks through each
 connection and shows which mode it's in.

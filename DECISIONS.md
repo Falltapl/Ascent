@@ -279,7 +279,35 @@ loop, and a run where every batch failed raises instead of reporting a no-op.
 
 ---
 
-## 8. Known limits
+## 8. Packaging it as a desktop app
+
+`npm run install:app` builds `~/Applications/Ascent.app`.
+
+**Not Electron.** The app is already a local web server; wrapping it in Chromium would add roughly
+150 MB to supply a window the browser already provides. The bundle is a few KB of `Info.plist`,
+an `.icns`, and a launcher script.
+
+**One process in production.** In development Vite serves the UI on :5173 and Express serves the API
+on :8787, which is why CORS is configured at all. `npm start` has Express serve `dist/` too, so
+there is one process, one port, and no cross-origin — the CORS middleware is skipped entirely in that
+mode. Hashed assets get a one-year immutable cache; `index.html` gets `no-store`, because it names
+those hashed bundles and a cached copy would pin the app to a previous build.
+
+**Bound to 127.0.0.1, not 0.0.0.0.** This server holds a Canvas token that can read grades and submit
+work, plus mail. It has no business being reachable from the network.
+
+**The launcher is idempotent.** It checks whether something is already listening before starting a
+server, so opening the app twice doesn't spawn a duplicate. Failures surface as a macOS alert and a
+line in `~/Library/Logs/Ascent.log` rather than a window that silently never appears.
+
+**Icons are generated, not committed as binaries.** `scripts/make-icons.mjs` writes the PNGs from raw
+RGBA through `zlib`, which ships with Node — no image library needed. It renders at 4x and
+box-filters down so the rounded corners and triangle edge stay smooth, then `sips` and `iconutil`
+(both built into macOS) produce the `.icns`.
+
+---
+
+## 9. Known limits
 
 - Coursera and AWS study progress are manual. No API exists for either at the individual level.
 - Apple Calendar is read-only in v1.
