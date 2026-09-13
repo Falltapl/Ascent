@@ -390,6 +390,29 @@ if (SERVE_UI) {
 const port = Number(process.env.PORT || 8787)
 // Bind to loopback only. This holds Canvas tokens and mail; it has no business
 // being reachable from the network.
-app.listen(port, '127.0.0.1', () => {
+const server = app.listen(port, '127.0.0.1', () => {
+  // Express 5 runs this callback even when the bind failed — unlike raw net,
+  // which only emits 'listening' on success. Without this guard the process
+  // cheerfully announces a port it never got, right before the error handler
+  // below explains that the port was taken.
+  if (!server.listening) return
   console.log(`ascent ${SERVE_UI ? 'app' : 'api'}  →  http://localhost:${port}`)
+  if (!SERVE_UI) console.log(`open the UI at    →  http://localhost:5173`)
+})
+
+// `npm run dev` and the Ascent.app launcher both want this port. Without this
+// the second one dies on a bare stack trace and the UI just appears broken.
+server.on('error', (e: NodeJS.ErrnoException) => {
+  if (e.code !== 'EADDRINUSE') throw e
+  console.error(`
+  Port ${port} is already in use — Ascent is running somewhere else.
+
+  Most likely the Ascent.app window is open, or another 'npm run dev'.
+  Either use the one that's already running, or stop it first:
+
+      lsof -ti tcp:${port} | xargs kill
+
+  Then start this one again.
+`)
+  process.exit(1)
 })

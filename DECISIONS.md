@@ -296,6 +296,12 @@ those hashed bundles and a cached copy would pin the app to a previous build.
 **Bound to 127.0.0.1, not 0.0.0.0.** This server holds a Canvas token that can read grades and submit
 work, plus mail. It has no business being reachable from the network.
 
+**Express 5 fires the listen callback on a failed bind.** Raw `net` only emits `listening` on
+success, but `app.listen(port, host, cb)` runs `cb` even when the port is taken, with
+`server.listening === false`. Unguarded, the process announces a port it never got and then prints
+the conflict error immediately after — which reads like the server started and then broke. The
+callback now returns early unless `server.listening` is true.
+
 **The launcher is idempotent.** It checks whether something is already listening before starting a
 server, so opening the app twice doesn't spawn a duplicate. Failures surface as a macOS alert and a
 line in `~/Library/Logs/Ascent.log` rather than a window that silently never appears.
