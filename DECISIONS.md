@@ -341,8 +341,53 @@ UT Arlington's course-numbering convention — the second digit is semester cred
 
 ---
 
-## 10. Known limits
+## 10. Theming
 
+*Written after the fact: the log edit made alongside the theming commit (`f1e9f4a`) silently matched
+nothing, so this section did not exist until it was noticed missing while recording the fix below.
+The decisions and numbers are the ones established and measured at the time.*
+
+Three independent axes, each a data attribute on `<html>`: `data-theme` (dark/light), `data-accent`
+(six presets), `data-motion` (on/off). Switching is one attribute write and CSS does the rest — no
+React re-render, no prop drilling.
+
+**Getting there meant removing 338 hardcoded hex values** across twelve files. Before committing to a
+mechanical swap, it was verified that Tailwind 4 compiles `bg-[var(--accent)]/12` into
+`color-mix(in oklab, var(--accent) 12%, transparent)`, so opacity modifiers survive replacing a hex
+literal with a variable. The heatmap ramp is derived from the live accent the same way.
+
+**48 `bg-black/*` and `bg-white/*` overlays had to change too.** They read as "slightly raised" only
+against a dark background; on a white card, `bg-white/5` is invisible. White overlays became
+`var(--ink)`, which inverts between themes, and black wells became `var(--ground)`. The modal scrim
+is the one deliberate exception — a backdrop is dark in every theme.
+
+**Status colours don't follow the accent.** "Overdue" stays red under the Rose accent, because that
+red carries information rather than decoration.
+
+**Contrast was measured.** The first pass had three text tokens below WCAG AA against card surfaces:
+`--faint` at 2.6 in both themes, and `--ok` at 3.77 in light. After adjustment every text token clears
+4.5:1 in both themes, the lowest at 4.7.
+
+**The ambient background** is two oversized blurred gradients on 54s and 67s cycles, animated with
+`transform` only so they stay on the compositor. It has its own toggle and is forced off under
+`prefers-reduced-motion` regardless of the stored setting.
+
+An inline script in `index.html` applies the saved attributes before first paint; without it the app
+renders dark for a frame, then snaps to light.
+
+**Theme switches don't animate.** The first version transitioned `body` colour and card backgrounds
+over 0.35s. A switch restyles about 70 elements, each animating on its own clock while others changed
+instantly, so inherited text colour lagged behind new backgrounds — briefly white-on-white in light
+mode. Measured while verifying the grades card: two seconds after a switch, 70 CSS transitions were
+still `running`, with course codes rendering `rgb(240,240,255)` on a light row. `apply()` now sets a
+`data-theme-switching` attribute that forces `transition: none`, swaps the theme attributes, forces a
+style flush so the new values commit unanimated, and removes the attribute — synchronously, with no
+dependence on animation frames. Verified both directions: zero running transitions immediately after
+a switch, correctly paired text and background, and `.card-hover` transitions intact.
+
+---
+
+## 11. Known limits
 - Coursera and AWS study progress are manual. No API exists for either at the individual level.
 - Apple Calendar is read-only in v1.
 - ICS mode loses grades and submission state; only due dates survive.
