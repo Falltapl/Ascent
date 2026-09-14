@@ -3,6 +3,7 @@ import type { State, Config } from '../api'
 import { api } from '../api'
 import { Card, Ring, Bar, Button, Modal, Field, inputCls, dueMeta } from './ui'
 import { Heatmap } from './Heatmap'
+import { Grades } from './Grades'
 
 export function Dashboard({ s, cfg, reload, celebrate }: {
   s: State; cfg: Config | null; reload: () => void; celebrate: () => void
@@ -102,6 +103,8 @@ export function Dashboard({ s, cfg, reload, celebrate }: {
               })}
             </div>
           </Card>
+
+          <Grades grades={s.grades ?? []} />
 
           <Card className="p-5">
             <SectionHead title="Due soon" hint={cfg?.canvas.mode === 'off' ? 'Canvas not connected yet' : `via Canvas (${cfg?.canvas.mode})`} />

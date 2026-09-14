@@ -313,7 +313,35 @@ box-filters down so the rounded corners and triangle edge stay smooth, then `sip
 
 ---
 
-## 9. Known limits
+## 9. Grades
+
+Per-course grades for the current term, on the dashboard, refreshed with every Canvas sync.
+
+**The headline is Canvas's `current_score`, never `final_score`.** Canvas returns both, and against
+real data they diverge wildly early in a semester: INSY 3305 read **100** current and **22** final.
+`final_score` counts every ungraded assignment as zero. Showing it as "your grade" would be alarming
+and wrong, so it appears only inside the expanded view, labelled "if nothing else is turned in".
+
+**Canvas's number is used rather than recomputed.** Canvas applies the course's assignment-group
+weights, drop rules and grading scheme; reimplementing that would drift from what the registrar sees.
+The per-category breakdown *is* computed locally, from graded, non-excused, non-omitted work — it
+explains the total rather than replacing it.
+
+**Each grade says how much of the course it rests on.** A 100% built on Assignments alone (30% of
+BSTAT 3321's weight, exams not yet taken) is not the same claim as a 95% with something graded in
+every category. The expanded view states the settled share of course weight.
+
+**No invented totals.** ECON 3303 has graded work but every category weight is 0, so Canvas returns a
+null course score. The card says Canvas isn't publishing a total and still shows the breakdown,
+rather than fabricating an unweighted percentage that could be badly wrong.
+
+**Term GPA is an estimate and labelled as one.** Letter grades × credit hours, where hours come from
+UT Arlington's course-numbering convention — the second digit is semester credit hours
+(INSY 4321 → 3). Unparseable names fall back to 3. Courses without a letter are excluded.
+
+---
+
+## 10. Known limits
 
 - Coursera and AWS study progress are manual. No API exists for either at the individual level.
 - Apple Calendar is read-only in v1.

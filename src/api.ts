@@ -28,9 +28,17 @@ export type Stats = {
   streak: { current: number; best: number; loggedToday: boolean }
   heatmap: Record<string, number>
 }
+export type GradeGroup = { name: string; weight: number; earned: number; possible: number; graded: number; total: number }
+export type CourseGrade = {
+  course_id: string; course_name: string
+  current_score: number | null; current_grade: string | null; final_score: number | null
+  html_url: string | null; synced_at: string | null
+  groups: GradeGroup[]
+}
 export type State = {
   goals: Goal[]; certs: Cert[]; assignments: Assignment[]
   courses: Course[]; events: CalEvent[]; sessions: Session[]; stats: Stats
+  grades: CourseGrade[]
 }
 export type Config = {
   canvas: { mode: 'token' | 'ics' | 'off'; baseUrl: string | null }

@@ -46,6 +46,20 @@ CREATE TABLE IF NOT EXISTS assignments (
   synced_at    TEXT
 );
 
+-- One row per current-term course. Scores come from Canvas's own computation,
+-- which applies the course's assignment-group weights; the breakdown is stored
+-- as JSON because it is only ever read whole.
+CREATE TABLE IF NOT EXISTS course_grades (
+  course_id     TEXT PRIMARY KEY,
+  course_name   TEXT NOT NULL,
+  current_score REAL,          -- graded work only
+  current_grade TEXT,
+  final_score   REAL,          -- ungraded work counted as zero
+  groups_json   TEXT,          -- [{name, weight, earned, possible, graded, total}]
+  html_url      TEXT,
+  synced_at     TEXT
+);
+
 CREATE TABLE IF NOT EXISTS cert_confidence (
   cert_code  TEXT NOT NULL,
   domain_id  TEXT NOT NULL,

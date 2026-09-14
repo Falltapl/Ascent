@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { db, nowISO, uid, meta } from './db.ts'
 import { CERTS, readiness, predictedScore } from './certs.ts'
 import { computeXp, computeStreak, levelFor, heatmap } from './gamify.ts'
-import { syncCanvas, canvasWhoAmI, canvasMode } from './integrations/canvas.ts'
+import { syncCanvas, syncGrades, canvasWhoAmI, canvasMode } from './integrations/canvas.ts'
 import { syncCredly } from './integrations/credly.ts'
 import { lookupCourse } from './integrations/coursera.ts'
 import { syncAppleCalendar, syncCanvasIcs } from './integrations/ics.ts'
@@ -81,6 +81,8 @@ app.get('/api/state', (_req, res) => {
     certs,
     assignments: db.prepare(`SELECT * FROM assignments ORDER BY COALESCE(due_at,'9999')`).all(),
     courses: db.prepare(`SELECT * FROM courses ORDER BY added_at DESC`).all(),
+    grades: (db.prepare(`SELECT * FROM course_grades ORDER BY course_name`).all() as any[])
+      .map(({ groups_json, ...r }) => ({ ...r, groups: JSON.parse(groups_json || '[]') })),
     events: db.prepare(`SELECT * FROM cal_events WHERE start_at >= datetime('now','-1 day') ORDER BY start_at LIMIT 60`).all(),
     sessions: db.prepare(`SELECT * FROM study_sessions ORDER BY day DESC, created_at DESC LIMIT 40`).all(),
     stats: { xp, ...levelFor(xp), streak: computeStreak(), heatmap: heatmap() },
@@ -211,7 +213,9 @@ app.delete('/api/courses/:id', (req, res) => {
 app.post('/api/sync/canvas', wrap(async (_req, res) => {
   const mode = canvasMode()
   if (mode === 'off') return res.status(400).json({ error: 'Set CANVAS_TOKEN or CANVAS_ICS_URL in .env' })
-  const out = mode === 'token' ? await syncCanvas() : await syncCanvasIcs(process.env.CANVAS_ICS_URL!)
+  const out = mode === 'token'
+    ? { ...(await syncCanvas()), ...(await syncGrades()) }
+    : await syncCanvasIcs(process.env.CANVAS_ICS_URL!)
   meta.set('sync:canvas', nowISO())
   res.json({ mode, ...out })
 }))

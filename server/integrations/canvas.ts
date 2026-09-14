@@ -156,6 +156,96 @@ export async function syncCanvas() {
   return { courses: courses.length, skipped: all.length - courses.length, assignments: count, term: courses[0]?.term?.name ?? null }
 }
 
+type RawEnrollment = {
+  course_id: number
+  grades?: { current_score: number | null; current_grade: string | null; final_score: number | null; html_url?: string }
+}
+type RawGroup = {
+  name: string
+  group_weight: number | null
+  assignments?: {
+    points_possible: number | null
+    omit_from_final_grade?: boolean
+    submission?: { score: number | null; excused?: boolean; workflow_state?: string }
+  }[]
+}
+
+export type GroupScore = { name: string; weight: number; earned: number; possible: number; graded: number; total: number }
+
+/**
+ * Per-category standing, from graded work only. Excused and omitted
+ * assignments are skipped, matching how Canvas itself totals a group.
+ */
+export function scoreGroups(groups: RawGroup[]): GroupScore[] {
+  return groups.map((g) => {
+    let earned = 0, possible = 0, graded = 0, total = 0
+    for (const a of g.assignments ?? []) {
+      if (a.omit_from_final_grade || a.submission?.excused) continue
+      total++
+      const pts = a.points_possible ?? 0
+      if (a.submission?.score != null && pts > 0) {
+        earned += a.submission.score
+        possible += pts
+        graded++
+      }
+    }
+    return { name: g.name, weight: g.group_weight ?? 0, earned, possible, graded, total }
+  })
+}
+
+/** Standard US scale, used only when the course has no grading scheme of its own. */
+export function letterFor(score: number | null): string | null {
+  if (score == null) return null
+  if (score >= 90) return 'A'
+  if (score >= 80) return 'B'
+  if (score >= 70) return 'C'
+  if (score >= 60) return 'D'
+  return 'F'
+}
+
+export async function syncGrades() {
+  if (canvasMode() !== 'token') throw new Error('Grades need Canvas token mode')
+
+  const courses = (await canvasGet<RawCourse>('/courses', { enrollment_state: 'active', 'include[]': ['term'] }))
+    .filter((c) => isCurrentTerm(c))
+  const enrollments = await canvasGet<RawEnrollment>('/users/self/enrollments', {
+    'type[]': ['StudentEnrollment'], 'state[]': ['active'],
+  })
+
+  const upsert = db.prepare(`
+    INSERT INTO course_grades (course_id, course_name, current_score, current_grade, final_score, groups_json, html_url, synced_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(course_id) DO UPDATE SET
+      course_name=excluded.course_name, current_score=excluded.current_score, current_grade=excluded.current_grade,
+      final_score=excluded.final_score, groups_json=excluded.groups_json, html_url=excluded.html_url, synced_at=excluded.synced_at
+  `)
+
+  // Courses from finished terms would otherwise linger forever.
+  const keep = courses.map((c) => String(c.id))
+  db.prepare(`DELETE FROM course_grades WHERE course_id NOT IN (${keep.map(() => '?').join(',') || "''"})`).run(...keep)
+
+  for (const c of courses) {
+    const g = enrollments.find((e) => e.course_id === c.id)?.grades
+    let groups: GroupScore[] = []
+    try {
+      groups = scoreGroups(await canvasGet<RawGroup>(`/courses/${c.id}/assignment_groups`, {
+        'include[]': ['assignments', 'submission'],
+      }))
+    } catch { /* breakdown is optional; the course total still shows */ }
+
+    upsert.run(
+      String(c.id), prettyCourseName(c.name ?? `Course ${c.id}`),
+      g?.current_score ?? null,
+      g?.current_grade ?? letterFor(g?.current_score ?? null),
+      g?.final_score ?? null,
+      JSON.stringify(groups),
+      g?.html_url ?? `${BASE}/courses/${c.id}/grades`,
+      nowISO(),
+    )
+  }
+  return { gradedCourses: courses.length }
+}
+
 /** Verifies the token without pulling anything. Used by the setup screen. */
 export async function canvasWhoAmI() {
   const [me] = await canvasGet<{ id: number; name: string; primary_email?: string }>('/users/self')
