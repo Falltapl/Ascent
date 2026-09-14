@@ -106,8 +106,12 @@
     -webkit-font-smoothing: antialiased;
     min-height: 100vh;
     position: relative;
-    transition: background-color .35s ease, color .35s ease;
   }
+
+  /* Held for one synchronous style flush while theme attributes change. */
+  [data-theme-switching] *,
+  [data-theme-switching] *::before,
+  [data-theme-switching] *::after { transition: none !important; }
 
   /* ---- ambient background ----------------------------------------
      Two oversized, heavily blurred gradient fields drifting on a very
@@ -168,7 +172,6 @@
     border: 1px solid var(--line);
     border-radius: 1.25rem;
     backdrop-filter: blur(8px);
-    transition: background .35s ease, border-color .35s ease;
   }
   .card-hover { transition: transform .22s cubic-bezier(.2,.9,.3,1.4), border-color .22s, box-shadow .22s; }
   .card-hover:hover { transform: translateY(-3px); border-color: var(--line-2); box-shadow: var(--card-shadow); }

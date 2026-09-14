@@ -39,8 +39,17 @@ export function load(): Saved {
 
 export function apply(s: Saved) {
   const r = document.documentElement
+  // A theme change restyles ~70 elements at once. Left to animate, each one
+  // transitions on its own clock, so inherited text colour and non-animating
+  // backgrounds drift apart — briefly white-on-white in light mode. Turn
+  // transitions off, swap the attributes, force a style flush so the new
+  // values commit without animating, then turn them back on. All synchronous:
+  // no dependence on animation frames, which stall in background tabs.
+  r.setAttribute('data-theme-switching', '')
   r.dataset.theme = s.theme
   r.dataset.accent = s.accent
   r.dataset.motion = s.motion
+  void getComputedStyle(document.body).color
+  r.removeAttribute('data-theme-switching')
   try { localStorage.setItem(KEY, JSON.stringify(s)) } catch { /* private mode */ }
 }
