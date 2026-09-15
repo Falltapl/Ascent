@@ -50,6 +50,11 @@ export function readableError(e: any): string {
   if (/authentication_error|invalid x-api-key/i.test(msg)) {
     return 'That API key was rejected. Re-add it with: npm run token ANTHROPIC_API_KEY'
   }
+  // Google returns 503 UNAVAILABLE when a model is out of capacity. It is not
+  // an auth or config problem, and saying so saves a pointless key re-entry.
+  if (/UNAVAILABLE|high demand|overloaded/i.test(msg)) {
+    return 'Gemini is overloaded right now — that is Google\'s capacity, not your key. Try again in a minute, or switch provider in the header if another is set up.'
+  }
   if (/rate.?limit|RESOURCE_EXHAUSTED|quota/i.test(msg)) {
     return 'Rate limited or out of quota. Wait a moment, or switch provider in the header.'
   }
