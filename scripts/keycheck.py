@@ -12,7 +12,9 @@ val = os.environ["VALUE"].strip().strip("\"'").strip()
 env_file = os.environ.get("ENV_FILE", ".env")
 
 RULES = {
-    "GEMINI_API_KEY":      (r"^AIza[0-9A-Za-z_-]{35}$", 'Gemini keys are 39 characters and start with "AIza" (aistudio.google.com/apikey)'),
+    # Google moved AI Studio to "Auth keys" (AQ.) in 2026; legacy AIza keys are being
+    # retired but still accepted here, since the live check reports the real verdict.
+    "GEMINI_API_KEY":      (r"^(AQ\.[0-9A-Za-z_.-]{30,}|AIza[0-9A-Za-z_-]{35})$", 'Gemini keys start with "AQ." (older keys start with "AIza"). Get one at aistudio.google.com/apikey'),
     "ANTHROPIC_API_KEY":   (r"^sk-ant-[0-9A-Za-z_-]{20,}$", 'Anthropic keys start with "sk-ant-" (console.anthropic.com)'),
     "GMAIL_CLIENT_ID":     (r"^[0-9]+-[0-9a-z]+\.apps\.googleusercontent\.com$", 'Client IDs end in ".apps.googleusercontent.com"'),
     "GMAIL_CLIENT_SECRET": (r"^GOCSPX-[0-9A-Za-z_-]{20,}$", 'Client secrets start with "GOCSPX-"'),

@@ -41,9 +41,10 @@ export function readableError(e: any): string {
     // Say *why* when the saved value can't possibly be a key — a typo at the
     // hidden prompt otherwise looks identical to a revoked key.
     const saved = process.env.GEMINI_API_KEY ?? ''
-    const shape = /^AIza[0-9A-Za-z_-]{35}$/.test(saved)
+    // AI Studio issues "AQ." auth keys now; "AIza" is the legacy format.
+    const shape = /^(AQ\.[0-9A-Za-z_.-]{30,}|AIza[0-9A-Za-z_-]{35})$/.test(saved)
       ? ''
-      : ` The saved key is ${saved.length} characters; Gemini keys are 39 and start with "AIza".`
+      : ` The saved key is ${saved.length} characters and doesn't look like a Gemini key, which starts with "AQ." (or "AIza" for older keys).`
     return `Google rejected the Gemini API key.${shape} Get one at aistudio.google.com/apikey, then run: npm run token GEMINI_API_KEY`
   }
   if (/authentication_error|invalid x-api-key/i.test(msg)) {
