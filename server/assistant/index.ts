@@ -38,7 +38,13 @@ export function readableError(e: any): string {
     } catch { break }
   }
   if (/API key not valid|API_KEY_INVALID/i.test(msg)) {
-    return 'That API key was rejected. Re-add it with: npm run token GEMINI_API_KEY'
+    // Say *why* when the saved value can't possibly be a key — a typo at the
+    // hidden prompt otherwise looks identical to a revoked key.
+    const saved = process.env.GEMINI_API_KEY ?? ''
+    const shape = /^AIza[0-9A-Za-z_-]{35}$/.test(saved)
+      ? ''
+      : ` The saved key is ${saved.length} characters; Gemini keys are 39 and start with "AIza".`
+    return `Google rejected the Gemini API key.${shape} Get one at aistudio.google.com/apikey, then run: npm run token GEMINI_API_KEY`
   }
   if (/authentication_error|invalid x-api-key/i.test(msg)) {
     return 'That API key was rejected. Re-add it with: npm run token ANTHROPIC_API_KEY'
