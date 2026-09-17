@@ -39,6 +39,7 @@ export type StatusDef = { id: string; label: string; group: 'saved' | 'applied' 
 export type JobListing = {
   id: string; company: string; title: string; url: string; company_url: string | null
   locations: string[]; regions: ('DFW' | 'Austin' | 'Remote')[]; category: string | null; degrees: string[]
+  source: string; role_type: 'cloud' | 'security' | 'software' | 'data' | null
   posted_at: string | null; updated_at: string | null; application_id: string | null
 }
 export type Application = {
@@ -48,7 +49,8 @@ export type Application = {
   created_at: string; updated_at: string; status_changed_at: string
 }
 export type JobsPayload = {
-  term: string; statuses: StatusDef[]; lastSync: string | null; stale: boolean
+  term: string; statuses: StatusDef[]; lastSync: string | null; stale: boolean; refreshing: boolean
+  sources: { id: string; name: string; ok: boolean; count: number; error?: string; checked_at: string | null; skipped?: boolean }[]
   feed: JobListing[]; applications: Application[]
 }
 export type State = {
@@ -86,7 +88,7 @@ export const api = {
   config: () => req<Config>('/config'),
 
   jobs: () => req<JobsPayload>('/jobs'),
-  syncJobs: () => req<{ unchanged: boolean; kept: number; scanned?: number; removed?: number }>('/jobs/sync', { method: 'POST' }),
+  syncJobs: () => req<{ refreshing: boolean }>('/jobs/sync', { method: 'POST' }),
   addApplication: (b: { feed_id?: string; company?: string; role?: string; location?: string; url?: string; status?: string }) =>
     req<Application>('/applications', { method: 'POST', body: JSON.stringify(b) }),
   updateApplication: (id: string, b: Partial<Application>) =>

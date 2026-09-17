@@ -78,6 +78,19 @@ CREATE TABLE IF NOT EXISTS jobs_feed (
 
 -- The application tracker. feed_id is UNIQUE so one listing can't be tracked
 -- twice; SQLite allows many NULLs, so manual entries are unaffected.
+-- What a company career site said about a posting the last time its detail
+-- page was fetched, including postings that were rejected (wrong city, wrong
+-- term). Without it every refresh re-opens the same out-of-region postings.
+CREATE TABLE IF NOT EXISTS job_detail_cache (
+  id         TEXT PRIMARY KEY,
+  title      TEXT NOT NULL,
+  locations  TEXT NOT NULL,             -- JSON array
+  degrees    TEXT NOT NULL,             -- JSON array
+  posted_at  TEXT,
+  url        TEXT NOT NULL,
+  seen_at    TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS applications (
   id                TEXT PRIMARY KEY,
   feed_id           TEXT UNIQUE,
@@ -194,7 +207,12 @@ CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT);
 `)
 
 // Additive migrations. Guarded so startup is idempotent on an existing db.
-for (const [table, col, decl] of [['assignments', 'state', 'TEXT']] as const) {
+for (const [table, col, decl] of [
+  ['assignments', 'state', 'TEXT'],
+  // Existing rows all came from SimplifyJobs, so that's the correct default.
+  ['jobs_feed', 'source', "TEXT NOT NULL DEFAULT 'simplify'"],
+  ['jobs_feed', 'role_type', 'TEXT'],
+] as const) {
   const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]
   if (!cols.some((c) => c.name === col)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${decl}`)
 }

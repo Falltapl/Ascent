@@ -437,6 +437,42 @@ different ETag per encoding — a strong tag for the plain file, a weak one for 
 stores the gzip tag. A check made without `Accept-Encoding: gzip` can never match it. The app was
 right; the manual check was wrong.
 
+
+**Cloud internships needed more sources.** SimplifyJobs listed 82 cloud, infrastructure or IT
+internships for Summer 2027 nationwide and 4 in the target regions — the filter wasn't hiding them,
+they weren't there. Cloud roles mostly live on employers' own career sites. Added two adapters that
+read the same JSON those sites' pages load: amazon.jobs (AWS's Dallas and Austin teams) and Workday,
+which hosts ~28 relevant employers' career sites behind one common API. Workday site names were
+harvested from real posting URLs in the SimplifyJobs data instead of guessed; every site was probed
+live before being added (Dell's rejects the requests and is excluded). Microsoft (every internship in
+Redmond), Oracle (the keyword filter is ignored) and Greenhouse employers (no Texas internships yet)
+were probed and left out for now.
+
+Findings that shaped it: Workday returns 422 without a browser-style User-Agent (the app still names
+itself in it); a keyword search for "intern" matches every job, so the site's own intern facet is used,
+restricted to job-type facets after "College Station" and "Internal Audit" were picked up; amazon.jobs'
+`is_intern` field is always empty, so titles decide; many Workday postings say only "3 Locations", so
+detail pages are read — and cached, including rejected postings, which took a cold run of 273 requests
+to mostly list pages afterwards.
+
+**One set of rules for every source.** Region, role type, term and degree checks live in one module.
+"Cloud & infra" is its own role type. Two false positives from the first live run shaped the rule:
+"Microcontrollers System Engineering" (NXP) and "Autonomy & Intelligent Systems Engineering"
+(Caterpillar) — "systems engineering" in robotics and embedded domains isn't cloud. That domain only
+blocks the cloud label, so AWS's robotics software internship is still software. `RULES_VERSION`
+forces every source to be re-read when these rules change; otherwise an unchanged upstream file would
+keep stale labels indefinitely.
+
+**Sources own their rows.** A source can only replace its own listings, and one that fails keeps its
+last good results. A role reported by SimplifyJobs and a company site is kept once, from SimplifyJobs,
+which carries structured degree data.
+
+**Background refresh.** The server checks every 30 minutes and refreshes when data is over 3 hours
+old, re-reading company sites at most every 6 hours; a manual Refresh re-reads them at most every 30
+minutes. Checking on a short tick rather than a 3-hour timer means a laptop waking from sleep catches
+up promptly. Refresh requests return at once and the tab polls, since a cold run takes ~40s. Verified
+by starting only the scheduler against an empty database: it populated 136 listings unprompted.
+
 ---
 
 ## 12. Known limits

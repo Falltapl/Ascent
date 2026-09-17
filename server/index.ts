@@ -15,7 +15,8 @@ import { streamChat, providerStatus, defaultProvider, readableError, type ChatTu
 import { classifyPending } from './email/classify.ts'
 import * as graph from './email/sources/graph.ts'
 import * as gmail from './email/sources/gmail.ts'
-import { syncInternships, TERM as INTERNSHIP_TERM } from './integrations/simplify.ts'
+import { TERM as INTERNSHIP_TERM } from './integrations/simplify.ts'
+import { refreshJobs, isRefreshing, sourceStatuses, startJobsScheduler } from './integrations/jobsources/index.ts'
 import { STATUSES, isStatus, parseDay, localToday, toCsv } from './jobs.ts'
 
 const app = express()
@@ -267,12 +268,21 @@ app.get('/api/jobs', (_req, res) => {
     statuses: STATUSES,
     lastSync,
     stale: !lastSync || Date.now() - new Date(lastSync).getTime() > JOBS_STALE_MS,
+    refreshing: isRefreshing(),
+    sources: sourceStatuses(),
     feed,
     applications: db.prepare(`SELECT * FROM applications ORDER BY updated_at DESC`).all(),
   })
 })
 
-app.post('/api/jobs/sync', wrap(async (_req, res) => res.json(await syncInternships())))
+// Starts a refresh and returns immediately: company sites take ~40s on a cold
+// cache, too long to hold a request open. The UI polls /api/jobs until
+// \`refreshing\` clears. Manual refreshes re-check a company site at most every
+// 30 minutes; SimplifyJobs is always re-checked (one conditional request).
+app.post('/api/jobs/sync', (_req, res) => {
+  refreshJobs({ companyMinIntervalMs: 30 * 60_000 }).catch((e) => console.error('[jobs] refresh failed:', e.message))
+  res.status(202).json({ refreshing: true })
+})
 
 app.post('/api/applications', (req, res) => {
   const b = req.body ?? {}
@@ -510,6 +520,7 @@ const server = app.listen(port, '127.0.0.1', () => {
   // below explains that the port was taken.
   if (!server.listening) return
   console.log(`ascent ${SERVE_UI ? 'app' : 'api'}  →  http://localhost:${port}`)
+  startJobsScheduler()
   if (!SERVE_UI) console.log(`open the UI at    →  http://localhost:5173`)
 })
 

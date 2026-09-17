@@ -50,7 +50,9 @@ export function relativeDay(iso: string | null, now = new Date()): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
-const GRAD_IN_TITLE = /\b(ph\.?\s?d|doctoral|post-?doc|master'?s|masters|mba)\b/i
+// "Graduate" alone marks a grad program ("Software Engineering - Intern, Graduate");
+// \b keeps it from matching inside "Undergraduate".
+const GRAD_IN_TITLE = /\b(ph\.?\s?d|doctoral|post-?doc|master'?s|masters|mba|graduate)\b/i
 const UNDERGRAD_IN_TITLE = /\b(undergrad(uate)?|bachelor'?s)\b/i
 
 /**
@@ -75,6 +77,16 @@ export function gradOnlyLabel(degrees: string[]): string {
   const grad = degrees.filter((d) => !/^(bachelor|associate)/i.test(d))
   if (!grad.length) return 'Grad students only'
   return `${grad.join(' & ')} only`
+}
+
+/** "just now", "12m ago", "3h ago", then falls back to relativeDay. */
+export function relativeTime(iso: string | null, now = new Date()): string {
+  if (!iso) return ''
+  const mins = Math.floor((now.getTime() - new Date(iso).getTime()) / 60_000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  if (mins < 24 * 60) return `${Math.floor(mins / 60)}h ago`
+  return relativeDay(iso, now)
 }
 
 export const groupOf = (statuses: StatusDef[], id: string) => statuses.find((s) => s.id === id)?.group ?? 'saved'

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api, type Application, type JobListing, type JobsPayload, type StatusDef } from '../api'
 import { Card, Button, Modal, Field, inputCls } from './ui'
 import { SectionHead, Empty } from './Dashboard'
-import { byAttention, dueTone, gradOnlyLabel, groupOf, heardBackRate, relativeDay, staleDays, statusTone, undergradEligible } from '../jobs'
+import { byAttention, dueTone, gradOnlyLabel, groupOf, heardBackRate, relativeDay, relativeTime, staleDays, statusTone, undergradEligible } from '../jobs'
 
 const GROUPS = [
   { id: 'all', label: 'All' },
@@ -26,15 +26,35 @@ export function Internships() {
 
   const load = useCallback(() => api.jobs().then((d) => { setData(d); setErr('') }).catch((e) => setErr(e.message)), [])
 
+  // The server refreshes in the background; this only asks it to start one.
+  // Company career sites can take ~40s, so the request returns at once and the
+  // tab polls until the server reports it's done.
   const sync = useCallback(async () => {
     setSyncing(true)
-    try { await api.syncJobs(); await load() } catch (e: any) { setErr(e.message) } finally { setSyncing(false) }
-  }, [load])
+    try { await api.syncJobs() } catch (e: any) { setErr(e.message); setSyncing(false) }
+  }, [])
+
+  const refreshing = syncing || Boolean(data?.refreshing)
+  useEffect(() => {
+    if (!refreshing) return
+    const t = setInterval(() => {
+      api.jobs().then((d) => { setData(d); if (!d.refreshing) setSyncing(false) }).catch(() => {})
+    }, 3000)
+    return () => clearInterval(t)
+  }, [refreshing])
 
   useEffect(() => {
-    // Show cached listings immediately; refresh in the background if they're old.
-    api.jobs().then((d) => { setData(d); if (d.stale) sync() }).catch((e) => setErr(e.message))
+    // Show cached listings immediately; ask for a refresh if they're old.
+    api.jobs().then((d) => { setData(d); if (d.stale && !d.refreshing) sync() }).catch((e) => setErr(e.message))
   }, [sync])
+
+  useEffect(() => {
+    // Pick up background refreshes while the tab is open, and on return to it.
+    const refetch = () => { if (document.visibilityState === 'visible') load() }
+    const t = setInterval(refetch, 5 * 60_000)
+    document.addEventListener('visibilitychange', refetch)
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', refetch) }
+  }, [load])
 
   if (!data) {
     return (
@@ -51,7 +71,7 @@ export function Internships() {
     <div className="space-y-5">
       {err && <p className="rounded-xl border border-[var(--bad)]/30 bg-[var(--bad)]/10 px-4 py-2.5 text-sm text-[var(--bad)]">{err}</p>}
       <Tracker data={data} onReplace={replace} reload={load} onError={setErr} />
-      <Discover data={data} syncing={syncing} onSync={sync} reload={load} onError={setErr} />
+      <Discover data={data} syncing={refreshing} onSync={sync} reload={load} onError={setErr} />
     </div>
   )
 }
@@ -349,6 +369,24 @@ export function summarizeLocations(locs: string[]): string {
   return rest > 0 ? `${shown.join('; ')} +${rest} more` : shown.join('; ')
 }
 
+type Kind = 'all' | 'cloud' | 'software' | 'data' | 'security'
+const KINDS: { id: Kind; label: string }[] = [
+  { id: 'all', label: 'All roles' },
+  { id: 'cloud', label: 'Cloud & infra' },
+  { id: 'software', label: 'Software' },
+  { id: 'data', label: 'AI / data' },
+  { id: 'security', label: 'Security' },
+]
+/** Older rows may predate role types; fall back to Simplify's category. */
+const roleOf = (j: JobListing): Exclude<Kind, 'all'> | null =>
+  j.role_type ?? (/software/i.test(j.category ?? '') ? 'software' : /data|ai/i.test(j.category ?? '') ? 'data' : null)
+
+export function sourceLabel(j: Pick<JobListing, 'source' | 'company'>): string {
+  if (j.source === 'simplify') return 'SimplifyJobs'
+  if (j.source === 'amazon') return 'amazon.jobs'
+  return `${j.company} careers`
+}
+
 const REGIONS = ['DFW', 'Austin', 'Remote'] as const
 const PAGE = 25
 
@@ -356,7 +394,10 @@ function Discover({ data, syncing, onSync, reload, onError }: {
   data: JobsPayload; syncing: boolean; onSync: () => void; reload: () => void; onError: (m: string) => void
 }) {
   const [regions, setRegions] = useState<Set<string>>(new Set(REGIONS))
-  const [kind, setKind] = useState<'all' | 'software' | 'data'>('all')
+  const [kind, setKind] = useState<Kind>(() => {
+    try { const k = localStorage.getItem('ascent.jobs.kind'); return KINDS.some((x) => x.id === k) ? (k as Kind) : 'all' } catch { return 'all' }
+  })
+  useEffect(() => { try { localStorage.setItem('ascent.jobs.kind', kind) } catch { /* storage blocked */ } }, [kind])
   const [hideTracked, setHideTracked] = useState(false)
   // On by default; remembered per browser. Grad-only roles are hidden, not deleted.
   const [undergradOnly, setUndergradOnly] = useState(() => {
@@ -377,10 +418,12 @@ function Discover({ data, syncing, onSync, reload, onError }: {
     const needle = q.trim().toLowerCase()
     return eligible.filter((j) =>
       j.regions.some((r) => regions.has(r))
-      && (kind === 'all' || (kind === 'software' ? /software/i.test(j.category ?? '') : /data|ai/i.test(j.category ?? '')))
+      && (kind === 'all' || roleOf(j) === kind)
       && (!hideTracked || !j.application_id)
       && (!needle || `${j.company} ${j.title} ${j.locations.join(' ')}`.toLowerCase().includes(needle)))
   }, [eligible, regions, kind, hideTracked, q])
+
+  const inRegions = useMemo(() => eligible.filter((j) => j.regions.some((r) => regions.has(r))), [eligible, regions])
 
   const toggleRegion = (r: string) => setRegions((cur) => {
     const next = new Set(cur)
@@ -403,7 +446,7 @@ function Discover({ data, syncing, onSync, reload, onError }: {
     <Card className="p-5" hover={false}>
       <SectionHead
         title="Open internships"
-        hint={`${data.term} · software & AI/data in DFW, Austin and remote US · ${syncing ? 'refreshing…' : data.lastSync ? `updated ${relativeDay(data.lastSync)}` : 'not synced yet'}`}
+        hint={`${data.term} · DFW, Austin and remote US · ${data.sources.length || 1} sources · ${syncing ? 'refreshing…' : data.lastSync ? `checked ${relativeTime(data.lastSync)}` : 'not synced yet'}`}
         action={<Button size="sm" onClick={onSync} disabled={syncing}>{syncing ? 'Refreshing…' : '↻ Refresh'}</Button>} />
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -414,11 +457,14 @@ function Discover({ data, syncing, onSync, reload, onError }: {
           </button>
         ))}
         <span className="mx-1 h-5 w-px bg-[var(--line)]" aria-hidden />
-        {(['all', 'software', 'data'] as const).map((k) => (
-          <button key={k} onClick={() => setKind(k)} aria-pressed={kind === k} className={chip(kind === k)}>
-            {k === 'all' ? 'All roles' : k === 'software' ? 'Software' : 'AI / data'}
-          </button>
-        ))}
+        {KINDS.map((k) => {
+          const count = k.id === 'all' ? inRegions.length : inRegions.filter((j) => roleOf(j) === k.id).length
+          return (
+            <button key={k.id} onClick={() => setKind(k.id)} aria-pressed={kind === k.id} className={chip(kind === k.id)}>
+              {k.label}<span className="ml-1.5 text-[var(--faint)]">{count}</span>
+            </button>
+          )
+        })}
         <label className="ml-1 flex cursor-pointer items-center gap-1.5 text-xs text-[var(--muted)]">
           <input type="checkbox" aria-label="Hide tracked listings" checked={hideTracked} onChange={(e) => setHideTracked(e.target.checked)} className="h-3.5 w-3.5 accent-[var(--accent)]" />
           Hide tracked
@@ -436,7 +482,9 @@ function Discover({ data, syncing, onSync, reload, onError }: {
       {data.feed.length === 0 ? (
         <Empty text={syncing ? 'Pulling the latest listings…' : 'No listings yet. Hit Refresh to pull them from SimplifyJobs.'} />
       ) : list.length === 0 ? (
-        <Empty text="No listings match these filters." />
+        <Empty text={kind === 'cloud'
+          ? 'No cloud or infrastructure internships match right now. Most cloud internships for next summer post between September and January — the list refreshes in the background every few hours and will pick them up.'
+          : 'No listings match these filters.'} />
       ) : (
         <>
           <ul className="space-y-1.5">
@@ -450,7 +498,12 @@ function Discover({ data, syncing, onSync, reload, onError }: {
                   <div className="flex flex-wrap items-center gap-x-2 text-[11px] text-[var(--muted)]">
                     <span className="truncate" title={j.locations.join('; ')}>{summarizeLocations(j.locations)}</span>
                     {j.posted_at && <span>· posted {relativeDay(j.posted_at)}</span>}
-                    {j.category && <span className="rounded bg-[var(--ink)]/5 px-1.5 py-px">{j.category}</span>}
+                    {roleOf(j) && (
+                      <span className={`rounded px-1.5 py-px ${roleOf(j) === 'cloud' ? 'bg-[var(--accent)]/15 text-[var(--accent)]' : 'bg-[var(--ink)]/5'}`}>
+                        {KINDS.find((k) => k.id === roleOf(j))!.label}
+                      </span>
+                    )}
+                    <span className="text-[var(--faint)]">via {sourceLabel(j)}</span>
                     {!undergradEligible(j) && (
                       <span className="rounded bg-[var(--warn)]/12 px-1.5 py-px text-[var(--warn)]">{gradOnlyLabel(j.degrees)}</span>
                     )}
@@ -476,9 +529,34 @@ function Discover({ data, syncing, onSync, reload, onError }: {
           </div>
         </>
       )}
-      <p className="mt-3 text-[11px] text-[var(--faint)]">
-        Listings from <a href="https://github.com/SimplifyJobs/Summer2027-Internships" target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-[var(--muted)]">SimplifyJobs</a>, maintained by Simplify and Pitt CSC. Always confirm details on the company's own posting.
+      <SourcesPanel sources={data.sources} />
+      <p className="mt-2 text-[11px] text-[var(--faint)]">
+        Listings from <a href="https://github.com/SimplifyJobs/Summer2027-Internships" target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-[var(--muted)]">SimplifyJobs</a> (maintained by Simplify and Pitt CSC) and employers' own career sites. Refreshes in the background while the app is running. Always confirm details on the company's posting.
       </p>
     </Card>
+  )
+}
+
+function SourcesPanel({ sources }: { sources: JobsPayload['sources'] }) {
+  if (!sources.length) return null
+  const failed = sources.filter((s) => !s.ok)
+  const withListings = sources.filter((s) => s.count > 0)
+  return (
+    <details className="mt-3 rounded-xl border border-[var(--line)] bg-[var(--ground)]/30 px-3 py-2 text-xs">
+      <summary className="cursor-pointer text-[var(--muted)]">
+        Checked {sources.length} sources · {withListings.length} with matches
+        {failed.length > 0 && <span className="text-[var(--warn)]"> · {failed.length} unreachable</span>}
+      </summary>
+      <ul className="mt-2 grid gap-x-6 gap-y-1 sm:grid-cols-2">
+        {sources.map((s) => (
+          <li key={s.id} className="flex items-baseline justify-between gap-2">
+            <span className={`truncate ${s.ok ? '' : 'text-[var(--warn)]'}`} title={s.error}>{s.ok ? '' : '⚠ '}{s.name}</span>
+            <span className="shrink-0 font-[var(--font-mono)] text-[var(--faint)]">
+              {s.count} · {s.ok ? (s.checked_at ? relativeTime(s.checked_at) : '—') : 'failed'}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </details>
   )
 }
