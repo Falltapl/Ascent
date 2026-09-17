@@ -1,8 +1,12 @@
 /**
  * Generates the app icons with no image dependencies — raw RGBA pixels
  * encoded to PNG via zlib, which ships with Node. Renders at 4x and box-
- * filters down, which is what keeps the rounded corners and the triangle
- * edge from looking jagged.
+ * filters down, which is what keeps the rounded corners and the ring edges
+ * from looking jagged.
+ *
+ * The mark must match src/components/Logo.tsx: in a 64-unit box, a ring of
+ * radius 15 and stroke 5.5 with round caps, covering 270° clockwise from
+ * 12 o'clock, plus a centre dot of radius 4.5.
  */
 import { deflateSync } from 'node:zlib'
 import { writeFileSync, mkdirSync } from 'node:fs'
@@ -62,14 +66,23 @@ function render(size, { padRatio = 0, bg = null } = {}) {
   const pad = S * padRatio
   const r = (S - pad * 2) * 0.235
 
-  // triangle geometry, centred in the padded box
+  // Everything below is in the same 64-unit space as Logo.tsx's viewBox.
   const box = S - pad * 2
-  const tw = box * 0.46, th = box * 0.40
-  const cx = S / 2, cy = S / 2 + box * 0.035
-  const ax = cx, ay = cy - th / 2
-  const bx = cx - tw / 2, by = cy + th / 2
-  const cx2 = cx + tw / 2, cy2 = cy + th / 2
-  const sign = (px, py, x1, y1, x2, y2) => (px - x2) * (y1 - y2) - (x1 - x2) * (py - y2)
+  const HALF = 5.5 / 2
+  const capA = [32, 17]  // 12 o'clock, where the arc starts
+  const capB = [17, 32]  // 9 o'clock, 270° later
+  const inMark = (u, v) => {
+    const dx = u - 32, dy = v - 32
+    const d = Math.hypot(dx, dy)
+    if (d <= 4.5) return true                                   // centre dot
+    if (Math.abs(d - 15) <= HALF) {
+      // screen coords (y down): clockwise is increasing atan2, starting at -90°
+      const a = (((Math.atan2(dy, dx) * 180) / Math.PI + 90) % 360 + 360) % 360
+      if (a <= 270) return true                                 // the arc
+    }
+    return Math.hypot(u - capA[0], v - capA[1]) <= HALF         // round caps
+        || Math.hypot(u - capB[0], v - capB[1]) <= HALF
+  }
 
   for (let y = 0; y < S; y++) {
     for (let x = 0; x < S; x++) {
@@ -80,11 +93,9 @@ function render(size, { padRatio = 0, bg = null } = {}) {
       }
       const t = (x + y) / (2 * S)
       const c = lerp(A, B, t)
-      const d1 = sign(x, y, ax, ay, bx, by)
-      const d2 = sign(x, y, bx, by, cx2, cy2)
-      const d3 = sign(x, y, cx2, cy2, ax, ay)
-      const inTri = !(((d1 < 0) || (d2 < 0) || (d3 < 0)) && ((d1 > 0) || (d2 > 0) || (d3 > 0)))
-      const px = inTri ? INK : c
+      const u = ((x + 0.5 - pad) / box) * 64
+      const v = ((y + 0.5 - pad) / box) * 64
+      const px = inMark(u, v) ? INK : c
       big[i] = px[0]; big[i+1] = px[1]; big[i+2] = px[2]; big[i+3] = 255
     }
   }

@@ -8,6 +8,7 @@ import { Coursework } from './components/Coursework'
 import { Settings } from './components/Settings'
 import { Assistant } from './components/Assistant'
 import { ThemeMenu } from './components/ThemeMenu'
+import { LogoMark } from './components/Logo'
 import { Inbox } from './components/Inbox'
 
 const TABS = [
@@ -45,8 +46,8 @@ export default function App() {
 
       <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="grid h-11 w-11 place-content-center rounded-2xl bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-xl font-bold text-[var(--ground)] shadow-lg shadow-[var(--accent)]/25">
-            ▲
+          <div className="grid h-11 w-11 place-content-center rounded-2xl bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[var(--ground)] shadow-lg shadow-[var(--accent)]/25">
+            <LogoMark className="h-11 w-11" />
           </div>
           <div>
             <h1 className="font-[var(--font-display)] text-xl font-bold leading-none">Ascent</h1>
