@@ -15,6 +15,8 @@ import { streamChat, providerStatus, defaultProvider, readableError, type ChatTu
 import { classifyPending } from './email/classify.ts'
 import * as graph from './email/sources/graph.ts'
 import * as gmail from './email/sources/gmail.ts'
+import { syncInternships, TERM as INTERNSHIP_TERM } from './integrations/simplify.ts'
+import { STATUSES, isStatus, parseDay, localToday, toCsv } from './jobs.ts'
 
 const app = express()
 // In dev the UI is served by Vite on another port, so it needs CORS. In
@@ -246,6 +248,113 @@ app.post('/api/sync/calendar', wrap(async (_req, res) => {
 
 /** Reports whether macOS has granted Calendar access, without syncing. */
 app.get('/api/calendar/check', wrap(async (_req, res) => res.json(await checkEventKit())))
+
+/* ── internships ─────────────────────────────────────────────────────── */
+const JOBS_STALE_MS = 6 * 60 * 60 * 1000
+
+app.get('/api/jobs', (_req, res) => {
+  const feed = (db.prepare(`
+    SELECT f.*, a.id AS application_id FROM jobs_feed f
+    LEFT JOIN applications a ON a.feed_id = f.id
+    ORDER BY f.posted_at DESC
+  `).all() as any[]).map((r) => ({
+    ...r,
+    locations: JSON.parse(r.locations), regions: JSON.parse(r.regions), degrees: JSON.parse(r.degrees || '[]'),
+  }))
+  const lastSync = meta.get('sync:jobs')
+  res.json({
+    term: INTERNSHIP_TERM,
+    statuses: STATUSES,
+    lastSync,
+    stale: !lastSync || Date.now() - new Date(lastSync).getTime() > JOBS_STALE_MS,
+    feed,
+    applications: db.prepare(`SELECT * FROM applications ORDER BY updated_at DESC`).all(),
+  })
+})
+
+app.post('/api/jobs/sync', wrap(async (_req, res) => res.json(await syncInternships())))
+
+app.post('/api/applications', (req, res) => {
+  const b = req.body ?? {}
+  const now = nowISO()
+  let row: { company: string; role: string; location: string; url: string; feed_id: string | null }
+
+  if (b.feed_id) {
+    // Copy from the stored listing rather than trusting client fields.
+    const f = db.prepare(`SELECT * FROM jobs_feed WHERE id = ?`).get(String(b.feed_id)) as any
+    if (!f) return res.status(404).json({ error: 'That listing is no longer in the feed' })
+    const existing = db.prepare(`SELECT id FROM applications WHERE feed_id = ?`).get(f.id) as any
+    if (existing) return res.status(409).json({ error: 'Already tracked', id: existing.id })
+    row = { company: f.company, role: f.title, location: JSON.parse(f.locations).join('; '), url: f.url, feed_id: f.id }
+  } else {
+    const company = String(b.company ?? '').trim(), role = String(b.role ?? '').trim()
+    if (!company || !role) return res.status(400).json({ error: 'Company and role are required' })
+    row = { company, role, location: String(b.location ?? '').trim(), url: String(b.url ?? '').trim(), feed_id: null }
+  }
+
+  const status = b.status === undefined ? 'saved' : b.status
+  if (!isStatus(status)) return res.status(400).json({ error: `Unknown status "${status}"` })
+  const id = uid()
+  db.prepare(`INSERT INTO applications (id, feed_id, company, role, location, url, status, applied_on, created_at, updated_at, status_changed_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    .run(id, row.feed_id, row.company, row.role, row.location, row.url, status,
+      status === 'saved' ? null : localToday(), now, now, now)
+  db.prepare(`INSERT INTO application_events (id, application_id, from_status, to_status, at) VALUES (?, ?, NULL, ?, ?)`)
+    .run(uid(), id, status, now)
+  res.status(201).json(db.prepare(`SELECT * FROM applications WHERE id = ?`).get(id))
+})
+
+app.patch('/api/applications/:id', (req, res) => {
+  const cur = db.prepare(`SELECT * FROM applications WHERE id = ?`).get(req.params.id) as any
+  if (!cur) return res.status(404).json({ error: 'Application not found' })
+  const b = req.body ?? {}
+  const next: Record<string, unknown> = {}
+
+  for (const k of ['company', 'role', 'location', 'url', 'next_step', 'referral', 'notes'] as const) {
+    if (b[k] === undefined) continue
+    const v = String(b[k] ?? '').trim()
+    if ((k === 'company' || k === 'role') && !v) return res.status(400).json({ error: `${k} can't be empty` })
+    next[k] = v.slice(0, k === 'notes' ? 5000 : 500)
+  }
+  for (const k of ['applied_on', 'next_step_on'] as const) {
+    if (b[k] === undefined) continue
+    const d = parseDay(b[k])
+    if (d === undefined) return res.status(400).json({ error: `${k} must be a real date (YYYY-MM-DD)` })
+    next[k] = d
+  }
+  const now = nowISO()
+  if (b.status !== undefined && b.status !== cur.status) {
+    if (!isStatus(b.status)) return res.status(400).json({ error: `Unknown status "${b.status}"` })
+    next.status = b.status
+    next.status_changed_at = now
+    // Moving past "saved" is when the application was sent, if no date was set.
+    if (cur.status === 'saved' && b.status !== 'saved' && !cur.applied_on && next.applied_on === undefined) {
+      next.applied_on = localToday()
+    }
+    db.prepare(`INSERT INTO application_events (id, application_id, from_status, to_status, at) VALUES (?, ?, ?, ?, ?)`)
+      .run(uid(), cur.id, cur.status, b.status, now)
+  }
+  if (!Object.keys(next).length) return res.json(cur)
+
+  next.updated_at = now
+  const keys = Object.keys(next)
+  db.prepare(`UPDATE applications SET ${keys.map((k) => `${k} = ?`).join(', ')} WHERE id = ?`)
+    .run(...keys.map((k) => next[k] as any), cur.id)
+  res.json(db.prepare(`SELECT * FROM applications WHERE id = ?`).get(cur.id))
+})
+
+app.delete('/api/applications/:id', (req, res) => {
+  const r = db.prepare(`DELETE FROM applications WHERE id = ?`).run(req.params.id)
+  if (!r.changes) return res.status(404).json({ error: 'Application not found' })
+  res.json({ ok: true })
+})
+
+app.get('/api/applications.csv', (_req, res) => {
+  const rows = db.prepare(`SELECT * FROM applications ORDER BY created_at`).all() as Record<string, unknown>[]
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8')
+  res.setHeader('Content-Disposition', `attachment; filename="ascent-applications-${localToday()}.csv"`)
+  res.send(toCsv(rows))
+})
 
 /* ── assistant ──────────────────────────────────────────────────────── */
 app.post('/api/chat', wrap(async (req, res) => {

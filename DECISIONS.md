@@ -387,7 +387,46 @@ a switch, correctly paired text and background, and `.card-hover` transitions in
 
 ---
 
-## 11. Known limits
+## 11. Internship tracker
+
+An Internships tab: an application tracker plus a feed of open Summer 2027 roles in DFW, Austin and
+remote US.
+
+**The feed comes from SimplifyJobs' community list**, which publishes every listing as one JSON file
+(~13 MB, ~17k rows across all terms). The server downloads it, keeps active, visible, Summer 2027,
+software or AI/data roles in the target regions — 117 at first sync — and stores only those. The repo
+has no license, so the data is read at runtime for personal use and never committed. Re-syncs send
+the stored ETag; an unchanged file returns 304 in ~30ms instead of re-downloading.
+
+**Regions match city and state together.** A substring match on "Austin" counted "Austin, MN", and
+"Arlington" counted Arlington, VA — both present in the real data.
+
+**Tracked postings that disappear are flagged, not deleted.** When a listing drops out of the active
+set, the application gets "Posting closed" and keeps its notes and status.
+
+**Server code was never typechecked.** `tsc -b` covered only `src/` and `vite.config.ts`; a planted
+type error in a server file produced no output. Every earlier "typecheck clean" about server changes
+covered only the frontend. Added `tsconfig.server.json` (strict) and Express/CORS type definitions;
+the existing server code then passed with zero errors, so the gap was coverage, not latent bugs.
+
+**Three UI bugs found by using it, not by reading it:**
+- *Unsaved text wiped by save replies.* Each row resets from the server's response after a save. A
+  reply for one field landing while another field was mid-edit replaced the typed text. Now the field
+  being edited is excluded from the reset. Reproduced with focus held in the field during a status
+  change, and confirmed fixed.
+- *Overdue dates not red.* The base cell style set a text colour; two Tailwind colour utilities on one
+  element resolve by stylesheet order, not class order, so the base won. Each cell sets its own colour.
+- *Dialog covered by the page.* The Add dialog rendered inside a card, and `.card` has
+  `backdrop-filter`, which makes it the containing block for fixed-position children — the next
+  section painted over the dialog and its button. Modals now portal to `<body>`, fixing it for every
+  dialog.
+
+CSV export neutralises cells starting with `= + - @` so a scraped title can't run as a spreadsheet
+formula.
+
+---
+
+## 12. Known limits
 - Coursera and AWS study progress are manual. No API exists for either at the individual level.
 - Apple Calendar is read-only in v1.
 - ICS mode loses grades and submission state; only due dates survive.

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 
 export const ACCENT = {
   violet: { text: 'text-[var(--accent)]', ring: 'var(--accent)', bg: 'bg-[var(--accent)]', soft: 'bg-[var(--accent)]/12', border: 'border-[var(--accent)]/35' },
@@ -95,16 +96,22 @@ export function Modal({ open, onClose, title, children }: {
     return () => window.removeEventListener('keydown', k)
   }, [open, onClose])
   if (!open) return null
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4 backdrop-blur-sm" onClick={onClose}>
+  // Portalled to <body>. A fixed-position overlay rendered inside any ancestor
+  // with backdrop-filter or transform — every .card has backdrop-filter — is
+  // positioned and stacked relative to that ancestor instead of the viewport,
+  // so later page sections paint over it and cover its buttons.
+  return createPortal(
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4 backdrop-blur-sm" onClick={onClose}
+         role="dialog" aria-modal="true" aria-label={title}>
       <div className="card w-full max-w-lg animate-rise p-6" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
           <h3 className="font-[var(--font-display)] text-lg font-bold">{title}</h3>
-          <button onClick={onClose} className="rounded-lg px-2 text-xl text-[var(--muted)] hover:bg-[var(--ink)]/5 hover:text-white">×</button>
+          <button onClick={onClose} className="rounded-lg px-2 text-xl text-[var(--muted)] hover:bg-[var(--ink)]/5 hover:text-[var(--ink)]" aria-label="Close">×</button>
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

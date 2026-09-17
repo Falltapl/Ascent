@@ -60,6 +60,52 @@ CREATE TABLE IF NOT EXISTS course_grades (
   synced_at     TEXT
 );
 
+-- Internship listings from SimplifyJobs, already filtered to the tracked term,
+-- regions and role categories. Replaced wholesale on every sync.
+CREATE TABLE IF NOT EXISTS jobs_feed (
+  id          TEXT PRIMARY KEY,          -- Simplify listing id
+  company     TEXT NOT NULL,
+  title       TEXT NOT NULL,
+  url         TEXT NOT NULL,
+  company_url TEXT,
+  locations   TEXT NOT NULL,             -- JSON array of "City, ST"
+  regions     TEXT NOT NULL,             -- JSON array: DFW | Austin | Remote
+  category    TEXT,
+  degrees     TEXT,                      -- JSON array
+  posted_at   TEXT,
+  updated_at  TEXT
+);
+
+-- The application tracker. feed_id is UNIQUE so one listing can't be tracked
+-- twice; SQLite allows many NULLs, so manual entries are unaffected.
+CREATE TABLE IF NOT EXISTS applications (
+  id                TEXT PRIMARY KEY,
+  feed_id           TEXT UNIQUE,
+  company           TEXT NOT NULL,
+  role              TEXT NOT NULL,
+  location          TEXT NOT NULL DEFAULT '',
+  url               TEXT NOT NULL DEFAULT '',
+  status            TEXT NOT NULL DEFAULT 'saved',
+  applied_on        TEXT,                -- YYYY-MM-DD
+  next_step         TEXT NOT NULL DEFAULT '',
+  next_step_on      TEXT,                -- YYYY-MM-DD
+  referral          TEXT NOT NULL DEFAULT '',
+  notes             TEXT NOT NULL DEFAULT '',
+  posting_closed    INTEGER NOT NULL DEFAULT 0,
+  created_at        TEXT NOT NULL,
+  updated_at        TEXT NOT NULL,
+  status_changed_at TEXT NOT NULL
+);
+
+-- Every status change, so "days since applied" and history survive edits.
+CREATE TABLE IF NOT EXISTS application_events (
+  id             TEXT PRIMARY KEY,
+  application_id TEXT NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+  from_status    TEXT,
+  to_status      TEXT NOT NULL,
+  at             TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS cert_confidence (
   cert_code  TEXT NOT NULL,
   domain_id  TEXT NOT NULL,

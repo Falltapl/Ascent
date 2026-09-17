@@ -35,6 +35,22 @@ export type CourseGrade = {
   html_url: string | null; synced_at: string | null
   groups: GradeGroup[]
 }
+export type StatusDef = { id: string; label: string; group: 'saved' | 'applied' | 'active' | 'offer' | 'closed' }
+export type JobListing = {
+  id: string; company: string; title: string; url: string; company_url: string | null
+  locations: string[]; regions: ('DFW' | 'Austin' | 'Remote')[]; category: string | null; degrees: string[]
+  posted_at: string | null; updated_at: string | null; application_id: string | null
+}
+export type Application = {
+  id: string; feed_id: string | null; company: string; role: string; location: string; url: string
+  status: string; applied_on: string | null; next_step: string; next_step_on: string | null
+  referral: string; notes: string; posting_closed: number
+  created_at: string; updated_at: string; status_changed_at: string
+}
+export type JobsPayload = {
+  term: string; statuses: StatusDef[]; lastSync: string | null; stale: boolean
+  feed: JobListing[]; applications: Application[]
+}
 export type State = {
   goals: Goal[]; certs: Cert[]; assignments: Assignment[]
   courses: Course[]; events: CalEvent[]; sessions: Session[]; stats: Stats
@@ -68,6 +84,14 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   state: () => req<State>('/state'),
   config: () => req<Config>('/config'),
+
+  jobs: () => req<JobsPayload>('/jobs'),
+  syncJobs: () => req<{ unchanged: boolean; kept: number; scanned?: number; removed?: number }>('/jobs/sync', { method: 'POST' }),
+  addApplication: (b: { feed_id?: string; company?: string; role?: string; location?: string; url?: string; status?: string }) =>
+    req<Application>('/applications', { method: 'POST', body: JSON.stringify(b) }),
+  updateApplication: (id: string, b: Partial<Application>) =>
+    req<Application>(`/applications/${id}`, { method: 'PATCH', body: JSON.stringify(b) }),
+  deleteApplication: (id: string) => req<{ ok: true }>(`/applications/${id}`, { method: 'DELETE' }),
 
   addGoal: (b: any) => req('/goals', { method: 'POST', body: JSON.stringify(b) }),
   updateGoal: (id: string, b: any) => req(`/goals/${id}`, { method: 'PATCH', body: JSON.stringify(b) }),
