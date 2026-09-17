@@ -424,6 +424,19 @@ the existing server code then passed with zero errors, so the gap was coverage, 
 CSV export neutralises cells starting with `= + - @` so a scraped title can't run as a spreadsheet
 formula.
 
+
+**Undergrad filter.** Each listing carries the degrees it accepts. A role counts as undergrad-eligible
+when those include Bachelor's (or Associate's), unless the title explicitly names PhD, Master's or MBA
+without also naming undergraduate — metadata and title occasionally disagree. Listings with no degree
+data and no hint in the title are kept, since unknown isn't excluded. On the first real run it hid 16
+of 120 listings, and flagged 3 roles already tracked as grad-only rather than removing them.
+
+**A freshness check that lied.** Checking whether the upstream file had changed, a manual conditional
+request returned 200 while the app's own sync returned 304. raw.githubusercontent.com issues a
+different ETag per encoding — a strong tag for the plain file, a weak one for gzip — and the app
+stores the gzip tag. A check made without `Accept-Encoding: gzip` can never match it. The app was
+right; the manual check was wrong.
+
 ---
 
 ## 12. Known limits

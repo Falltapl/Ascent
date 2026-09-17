@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api, type Application, type JobListing, type JobsPayload, type StatusDef } from '../api'
 import { Card, Button, Modal, Field, inputCls } from './ui'
 import { SectionHead, Empty } from './Dashboard'
-import { byAttention, dueTone, groupOf, heardBackRate, relativeDay, staleDays, statusTone } from '../jobs'
+import { byAttention, dueTone, gradOnlyLabel, groupOf, heardBackRate, relativeDay, staleDays, statusTone, undergradEligible } from '../jobs'
 
 const GROUPS = [
   { id: 'all', label: 'All' },
@@ -92,6 +92,7 @@ function Tracker({ data, onReplace, reload, onError }: {
   }, [apps, statuses, group, q, sort])
 
   const rate = heardBackRate(apps)
+  const feedById = useMemo(() => new Map(data.feed.map((j) => [j.id, j])), [data.feed])
 
   const Th = ({ k, children, className = '' }: { k: SortKey; children: React.ReactNode; className?: string }) => (
     <th className={`px-2 py-2 text-left text-[11px] font-medium uppercase tracking-wider text-[var(--muted)] ${className}`}
@@ -153,7 +154,8 @@ function Tracker({ data, onReplace, reload, onError }: {
             </thead>
             <tbody>
               {rows.map((a) => (
-                <Row key={a.id} a={a} statuses={statuses} onReplace={onReplace} reload={reload} onError={onError} />
+                <Row key={a.id} a={a} statuses={statuses} listing={a.feed_id ? feedById.get(a.feed_id) : undefined}
+                     onReplace={onReplace} reload={reload} onError={onError} />
               ))}
             </tbody>
           </table>
@@ -166,8 +168,9 @@ function Tracker({ data, onReplace, reload, onError }: {
   )
 }
 
-function Row({ a, statuses, onReplace, reload, onError }: {
-  a: Application; statuses: StatusDef[]; onReplace: (a: Application) => void; reload: () => void; onError: (m: string) => void
+function Row({ a, statuses, listing, onReplace, reload, onError }: {
+  a: Application; statuses: StatusDef[]; listing?: JobListing
+  onReplace: (a: Application) => void; reload: () => void; onError: (m: string) => void
 }) {
   const [draft, setDraft] = useState(a)
   const [open, setOpen] = useState(false)
@@ -199,6 +202,7 @@ function Row({ a, statuses, onReplace, reload, onError }: {
   const enterBlurs = (e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') e.currentTarget.blur() }
 
   const stale = staleDays(a)
+  const gradOnly = listing ? !undergradEligible(listing) : false
   const due = dueTone(a.next_step_on)
   const closed = groupOf(statuses, a.status) === 'closed'
   const hasNotes = Boolean(a.notes || a.referral)
@@ -216,8 +220,14 @@ function Row({ a, statuses, onReplace, reload, onError }: {
             )}
           </div>
           <input {...text('role')} onKeyDown={enterBlurs} aria-label="Role" title={draft.role} className={`${cell} text-xs text-[var(--muted)]`} />
-          {(a.posting_closed === 1 || stale != null) && (
+          {(a.posting_closed === 1 || stale != null || gradOnly) && (
             <div className="mt-1 flex flex-wrap gap-1 px-1.5">
+              {gradOnly && listing && (
+                <span className="rounded-md bg-[var(--warn)]/12 px-1.5 py-0.5 text-[10px] text-[var(--warn)]"
+                      title="The posting lists graduate degrees only. Check the company's requirements before applying.">
+                  {gradOnlyLabel(listing.degrees)}
+                </span>
+              )}
               {a.posting_closed === 1 && (
                 <span className="rounded-md bg-[var(--bad)]/12 px-1.5 py-0.5 text-[10px] text-[var(--bad)]" title="No longer listed on SimplifyJobs">Posting closed</span>
               )}
@@ -348,20 +358,29 @@ function Discover({ data, syncing, onSync, reload, onError }: {
   const [regions, setRegions] = useState<Set<string>>(new Set(REGIONS))
   const [kind, setKind] = useState<'all' | 'software' | 'data'>('all')
   const [hideTracked, setHideTracked] = useState(false)
+  // On by default; remembered per browser. Grad-only roles are hidden, not deleted.
+  const [undergradOnly, setUndergradOnly] = useState(() => {
+    try { return localStorage.getItem('ascent.jobs.undergradOnly') !== 'false' } catch { return true }
+  })
+  useEffect(() => {
+    try { localStorage.setItem('ascent.jobs.undergradOnly', String(undergradOnly)) } catch { /* storage blocked */ }
+  }, [undergradOnly])
+  const eligible = useMemo(() => (undergradOnly ? data.feed.filter(undergradEligible) : data.feed), [data.feed, undergradOnly])
+  const gradHidden = data.feed.length - data.feed.filter(undergradEligible).length
   const [q, setQ] = useState('')
   const [shown, setShown] = useState(PAGE)
   const [busy, setBusy] = useState<string | null>(null)
 
-  useEffect(() => setShown(PAGE), [regions, kind, hideTracked, q])
+  useEffect(() => setShown(PAGE), [regions, kind, hideTracked, undergradOnly, q])
 
   const list = useMemo(() => {
     const needle = q.trim().toLowerCase()
-    return data.feed.filter((j) =>
+    return eligible.filter((j) =>
       j.regions.some((r) => regions.has(r))
       && (kind === 'all' || (kind === 'software' ? /software/i.test(j.category ?? '') : /data|ai/i.test(j.category ?? '')))
       && (!hideTracked || !j.application_id)
       && (!needle || `${j.company} ${j.title} ${j.locations.join(' ')}`.toLowerCase().includes(needle)))
-  }, [data.feed, regions, kind, hideTracked, q])
+  }, [eligible, regions, kind, hideTracked, q])
 
   const toggleRegion = (r: string) => setRegions((cur) => {
     const next = new Set(cur)
@@ -391,7 +410,7 @@ function Discover({ data, syncing, onSync, reload, onError }: {
         {REGIONS.map((r) => (
           <button key={r} onClick={() => toggleRegion(r)} aria-pressed={regions.has(r)} className={chip(regions.has(r))}>
             {r === 'Remote' ? 'Remote US' : r}
-            <span className="ml-1.5 text-[var(--faint)]">{data.feed.filter((j) => j.regions.includes(r)).length}</span>
+            <span className="ml-1.5 text-[var(--faint)]">{eligible.filter((j) => j.regions.includes(r)).length}</span>
           </button>
         ))}
         <span className="mx-1 h-5 w-px bg-[var(--line)]" aria-hidden />
@@ -403,6 +422,12 @@ function Discover({ data, syncing, onSync, reload, onError }: {
         <label className="ml-1 flex cursor-pointer items-center gap-1.5 text-xs text-[var(--muted)]">
           <input type="checkbox" aria-label="Hide tracked listings" checked={hideTracked} onChange={(e) => setHideTracked(e.target.checked)} className="h-3.5 w-3.5 accent-[var(--accent)]" />
           Hide tracked
+        </label>
+        <label className="flex cursor-pointer items-center gap-1.5 text-xs text-[var(--muted)]"
+               title={`${gradHidden} listing${gradHidden === 1 ? '' : 's'} require a Master's, PhD or MBA`}>
+          <input type="checkbox" aria-label="Undergrad-eligible only" checked={undergradOnly}
+                 onChange={(e) => setUndergradOnly(e.target.checked)} className="h-3.5 w-3.5 accent-[var(--accent)]" />
+          Undergrad only{undergradOnly && gradHidden > 0 && <span className="text-[var(--faint)]">({gradHidden} hidden)</span>}
         </label>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Company, role, city…" aria-label="Search listings"
                className={`${inputCls} ml-auto w-48 py-1.5 text-xs`} />
@@ -426,6 +451,9 @@ function Discover({ data, syncing, onSync, reload, onError }: {
                     <span className="truncate" title={j.locations.join('; ')}>{summarizeLocations(j.locations)}</span>
                     {j.posted_at && <span>· posted {relativeDay(j.posted_at)}</span>}
                     {j.category && <span className="rounded bg-[var(--ink)]/5 px-1.5 py-px">{j.category}</span>}
+                    {!undergradEligible(j) && (
+                      <span className="rounded bg-[var(--warn)]/12 px-1.5 py-px text-[var(--warn)]">{gradOnlyLabel(j.degrees)}</span>
+                    )}
                   </div>
                 </div>
                 <div className="flex shrink-0 gap-1.5">

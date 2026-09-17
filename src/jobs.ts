@@ -50,6 +50,33 @@ export function relativeDay(iso: string | null, now = new Date()): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
+const GRAD_IN_TITLE = /\b(ph\.?\s?d|doctoral|post-?doc|master'?s|masters|mba)\b/i
+const UNDERGRAD_IN_TITLE = /\b(undergrad(uate)?|bachelor'?s)\b/i
+
+/**
+ * Whether a listing is open to someone working on a bachelor's degree.
+ *
+ * The degrees list is the main signal. The title is a second check, because a
+ * listing can accept "Bachelor's" in its metadata while its title says
+ * "- PhD", and when the metadata is empty the title is all there is. A title
+ * naming both ("Undergraduate and Master's") stays eligible. Listings with no
+ * degrees and no hint in the title are kept: unknown is not the same as
+ * excluded, and dropping them would hide real undergrad roles.
+ */
+export function undergradEligible(l: { degrees: string[]; title: string }): boolean {
+  const gradTitle = GRAD_IN_TITLE.test(l.title) && !UNDERGRAD_IN_TITLE.test(l.title)
+  if (gradTitle) return false
+  if (!l.degrees.length) return true
+  return l.degrees.some((d) => /^(bachelor|associate)/i.test(d))
+}
+
+/** "PhD only", "Master's & PhD", etc. — for explaining why a role is excluded. */
+export function gradOnlyLabel(degrees: string[]): string {
+  const grad = degrees.filter((d) => !/^(bachelor|associate)/i.test(d))
+  if (!grad.length) return 'Grad students only'
+  return `${grad.join(' & ')} only`
+}
+
 export const groupOf = (statuses: StatusDef[], id: string) => statuses.find((s) => s.id === id)?.group ?? 'saved'
 
 /** Colour follows meaning, not the accent — same rule as grades and deadlines. */
